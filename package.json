@@ -9,7 +9,7 @@
     "build": "pnpm build:helpers && pnpm --filter \"./npm/*\" --workspace-concurrency=1 --if-present build",
     "build:ffi2": "pnpm --filter @swc-next/core-ffi2 build:ffi2",
     "build:helpers": "pnpm --filter @swc-next/helpers build",
-    "build:js": "rslib build",
+    "build:js": "pnpm --filter @swc-next/ast2 build && rslib build",
     "build:wasm": "pnpm --filter \"./npm/*\" --workspace-concurrency=1 --if-present build:wasm",
     "build:wasm:ffi2": "pnpm --filter @swc-next/core-ffi2 build:wasm:ffi2",
     "build:browser": "pnpm --filter @swc-next/core-browser build:browser",

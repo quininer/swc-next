@@ -31,10 +31,9 @@ pub use decode::{deserialize, deserialize_unchecked};
 
 use std::{fmt, mem::size_of, ops::Deref, slice};
 
-use crate::{
-    Ast, AstCtx, AstNode, CloneIn, Diagnostic, ExportSpecifier, ExtraDataUnit, NodeId, NodeKind,
-    NodePayload, Span,
-};
+use crate::{Ast, AstCtx, Diagnostic, ExtraDataUnit, NodePayload, Span};
+#[cfg(feature = "internal_ffi2")]
+use crate::{AstNode, CloneIn, ExportSpecifier, NodeId, NodeKind};
 
 pub const SPAN_SIZE: usize = 8;
 pub const PAYLOAD_SIZE: usize = 16;
@@ -100,6 +99,7 @@ impl<'a> Deref for BorrowedAst<'a> {
 }
 
 /// Give each shorthand export name its own node before encoding a tree.
+#[cfg(feature = "internal_ffi2")]
 pub fn split_export_specifier_names(ast: &mut Ast<'_>) {
     let count = ast.node_count();
     let mut start = 0;

@@ -116,6 +116,8 @@ export interface PrivateIdentifier extends BaseNode {
 export interface BindingIdentifier extends BaseNode {
   type: "BindingIdentifier";
   name: string;
+  typeAnnotation: TsTypeAnnotation | null;
+  optional: boolean;
 }
 
 export interface IdentifierName extends BaseNode {
@@ -132,23 +134,29 @@ export interface AssignmentPattern extends BaseNode {
   type: "AssignmentPattern";
   left: BindingPattern;
   right: Expr;
+  typeAnnotation: TsTypeAnnotation | null;
 }
 
 export interface BindingRestElement extends BaseNode {
   type: "BindingRestElement";
   argument: BindingPattern;
+  typeAnnotation: TsTypeAnnotation | null;
 }
 
 export interface ArrayPattern extends BaseNode {
   type: "ArrayPattern";
   elements: Array<BindingPattern | null>;
   rest: BindingRestElement | null;
+  typeAnnotation: TsTypeAnnotation | null;
+  optional: boolean;
 }
 
 export interface ObjectPattern extends BaseNode {
   type: "ObjectPattern";
   properties: Array<BindingProperty>;
   rest: BindingRestElement | null;
+  typeAnnotation: TsTypeAnnotation | null;
+  optional: boolean;
 }
 
 export interface BindingProperty extends BaseNode {
@@ -210,7 +218,6 @@ export interface VariableDeclaration extends BaseNode {
 export interface VariableDeclarator extends BaseNode {
   type: "VariableDeclarator";
   id: BindingPattern;
-  typeAnnotation: TsTypeAnnotation | null;
   init: Expr | null;
   definite: boolean;
 }
@@ -267,7 +274,6 @@ export interface TryStatement extends BaseNode {
 export interface CatchClause extends BaseNode {
   type: "CatchClause";
   param: BindingPattern | null;
-  typeAnnotation: TsTypeAnnotation | null;
   body: BlockStatement;
 }
 
@@ -430,9 +436,7 @@ export interface FormalParameter extends BaseNode {
   type: "FormalParameter";
   decorators: Array<Decorator>;
   pattern: FormalParameterPattern;
-  typeAnnotation: TsTypeAnnotation | null;
   initializer: Expr | null;
-  optional: boolean;
 }
 
 export interface FormalParameterRest extends BaseNode {
@@ -650,6 +654,7 @@ export interface TsFunction extends BaseNode {
   generator: boolean;
   async: boolean;
   declare: boolean;
+  isMethod: boolean;
 }
 
 export interface TsMethodDefinition extends BaseNode {

@@ -288,6 +288,9 @@ importers:
 
   npm/core:
     dependencies:
+      '@swc-next/ast2':
+        specifier: workspace:*
+        version: link:../../packages/ast2
       '@swc-next/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -346,6 +349,9 @@ importers:
 
   npm/core-browser:
     dependencies:
+      '@swc-next/ast2':
+        specifier: workspace:*
+        version: link:../../packages/ast2
       '@swc-next/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -451,6 +457,9 @@ importers:
 
   npm/generator:
     dependencies:
+      '@swc-next/ast2':
+        specifier: workspace:*
+        version: link:../../packages/ast2
       '@swc-next/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -467,6 +476,9 @@ importers:
 
   npm/parser:
     dependencies:
+      '@swc-next/ast2':
+        specifier: workspace:*
+        version: link:../../packages/ast2
       '@swc-next/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -492,6 +504,16 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.1.1
+
+  packages/ast2:
+    dependencies:
+      '@swc-next/types':
+        specifier: workspace:*
+        version: link:../types
+    devDependencies:
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
 
   packages/helpers: {}
 
