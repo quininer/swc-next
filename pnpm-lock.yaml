@@ -536,6 +536,21 @@ importers:
         specifier: workspace:*
         version: link:../ast2
 
+  tasks/benchmark:
+    dependencies:
+      '@formatjs/icu-messageformat-parser':
+        specifier: 2.11.4
+        version: 2.11.4
+      '@swc-next/core':
+        specifier: workspace:*
+        version: link:../../npm/core
+      '@swc-next/walker':
+        specifier: workspace:*
+        version: link:../../packages/walker
+      '@swc-next/walker2':
+        specifier: workspace:*
+        version: link:../../packages/walker2
+
   tasks/benchmark/js-plugin:
     dependencies:
       '@formatjs/icu-messageformat-parser':
