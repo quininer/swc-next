@@ -129,7 +129,13 @@ class NumericListCursor {
   }
 
   get length() { return this.end - this.start; }
-  nodeId(index) { return this.ast.extraChild(this.owner, this.start + index, true); }
+  nodeId(index) {
+    const ast = this.ast, slot = this.start + index;
+    const original = slot < ast._extraCount;
+    const offset = original ? ast._extra + slot * 4 : ast._arena.extraAddress(slot);
+    const view = original ? ast._view : ast._arena.view;
+    return view.getUint32(offset, true);
+  }
   clear() { this.ast = null; this.descriptor = -1; }
 }
 
@@ -492,8 +498,10 @@ class WalkContext {
     this.#ancestors[this.#depth++] = id;
     try {
       for (let index = 0; index < cursor.length; index++) {
-        const child = cursor.nodeId(index);
-        if (child !== NONE) {
+        const word = cursor.nodeId(index);
+        if (word !== 0xffffffff) {
+          const child = word;
+          if (child >= ast.totalNodeCount) { throw new RangeError("AST child out of bounds"); }
           const kind = ast._kindAt(child);
           const action = this.#actions[kind];
           if (action !== 0) { index = this.#visit(child, kind, action, id, field, cursor, index); }
