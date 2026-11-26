@@ -36,8 +36,7 @@ export class DeltaArena {
   declare metadataOffset: number;
   declare extraOffset: number;
   declare stringsOffset: number;
-  declare rowCount: number;
-  declare newNodeCount: number;
+  readonly #owner: AstView | null;
   declare extraUsed: number;
   declare stringUsed: number;
   declare rowCapacity: number;
@@ -49,7 +48,9 @@ export class DeltaArena {
   // Keep the empty layout alive when all input ASTs in a batch are collected.
   static #shape = new this({ nodeCount: 0, extraCount: 0, stringLength: 0,
     byteLength: 0, rootId: 0, flags: 0 });
-  constructor(base: {nodeCount:number;extraCount:number;stringLength:number;byteLength:number;rootId:number;flags:number}) {
+  constructor(base: {nodeCount:number;extraCount:number;stringLength:number;byteLength:number;rootId:number;flags:number},
+    owner: AstView | null = null) {
+    this.#owner = owner;
     this.baseNodeCount = u32(base.nodeCount, "Base node count");
     this.baseExtraCount = u32(base.extraCount, "Base extra-data count");
     this.baseStringLength = u32(base.stringLength, "Base string length");
@@ -64,8 +65,6 @@ export class DeltaArena {
     this.metadataOffset = 0;
     this.extraOffset = 8;
     this.stringsOffset = 8;
-    this.rowCount = 0;
-    this.newNodeCount = 0;
     this.extraUsed = 0;
     this.stringUsed = 0;
     this.rowCapacity = 0;
@@ -74,8 +73,11 @@ export class DeltaArena {
   }
 
   get nodeCount() {
-    return this.baseNodeCount + this.newNodeCount;
+    return this.#owner?._allocatedNodeCount() ?? this.baseNodeCount;
   }
+
+  get rowCount() { return this.nodeCount - this.baseNodeCount; }
+  get newNodeCount() { return this.rowCount; }
 
   get extraCount() {
     return this.baseExtraCount + this.extraUsed;
@@ -106,7 +108,7 @@ export class DeltaArena {
       { throw new RangeError("New AST node IDs must be contiguous"); }
     if (id === this.nodeCount) {
       this.reserve(this.rowCount + 1);
-      this.rowCount++; this.newNodeCount++;
+      this.#owner!._commitNewNode();
     } else { this.ensureWritable(); }
     const offset = this.rowsOffset + (id - this.baseNodeCount) * ROW_SIZE;
     this.view!.setUint32(offset, start, true);
@@ -149,8 +151,7 @@ export class DeltaArena {
     // together instead of replacing the buffer on that first write.
     const strings = this.stringsCapacity === 0 && kind === NodeKind.StringLiteral ? 1 : this.stringUsed;
     this.reserve(this.rowCount + 1, this.extraUsed + extraCount, strings);
-    const id = this.nodeCount;
-    this.rowCount++; this.newNodeCount++;
+    const id = this.#owner!._commitNewNode();
     const offset = this.rowsOffset + (id - this.baseNodeCount) * ROW_SIZE;
     this.view!.setUint32(offset, start, true);
     this.view!.setUint32(offset + 4, end, true);
@@ -275,7 +276,8 @@ export class DeltaArena {
 
   _writeLayout() {
     const view = this.view!;
-    view.setUint32(0, this.rowCount, true);
+    const rows = this.rowCount;
+    view.setUint32(0, rows, true);
     view.setUint32(4, this.rowCapacity | UTF8_STRINGS, true);
     view.setUint32(this.extraOffset - 8, this.extraUsed, true);
     view.setUint32(this.extraOffset - 4, this.extraCapacity, true);
@@ -284,7 +286,7 @@ export class DeltaArena {
     const metadata = this.metadataOffset;
     view.setUint32(metadata, this.rootId, true);
     view.setUint32(metadata + 4, this.flags, true);
-    view.setUint32(metadata + 8, this.newNodeCount, true);
+    view.setUint32(metadata + 8, rows, true);
     view.setUint32(metadata + 12, this.baseNodeCount, true);
     view.setUint32(metadata + 16, this.baseExtraCount, true);
     view.setUint32(metadata + 20, this.baseStringLength, true);
@@ -311,7 +313,7 @@ export function ensureArena(ast: AstView) {
   if (ast._arena === null) {
     ast._arena = new DeltaArena({ nodeCount: ast.nodeCount, extraCount: ast._extraCount,
       stringLength: ast._stringLength, byteLength: ast.buffer.byteLength,
-      rootId: ast.rootId, flags: ast._flags });
+      rootId: ast.rootId, flags: ast._flags }, ast);
   }
   return ast._arena;
 }

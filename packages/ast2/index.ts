@@ -54,10 +54,10 @@ export class AstView {
   }
   #nodeCount = 0;
   #rootId = 0;
-  #meta: AstMeta;
+  #totalNodeCount = 0;
   #source: string | undefined = undefined;
   _bytes: Uint8Array;
-  _flags = 0;
+  readonly _flags: number = 0;
   _diagnosticLength = 0;
   _view: DataView;
   _nodes = 0;
@@ -83,7 +83,6 @@ export class AstView {
     if (input === LAYOUT_TEMPLATE) {
       this._bytes = new Uint8Array();
       this._view = new DataView(this._bytes.buffer);
-      this.#meta = parserMeta[0];
       return;
     }
     const bytes = inputBytes(input);
@@ -141,7 +140,7 @@ export class AstView {
     }
     this.#nodeCount = nodeCount;
     this.#rootId = rootId;
-    this.#meta = parserMeta[flags];
+    this.#totalNodeCount = nodeCount;
     this.kind(rootId);
   }
   get nodeCount() {
@@ -150,7 +149,11 @@ export class AstView {
   get rootId() {
     return this._arena?.rootId ?? this.#rootId;
   }
-  get totalNodeCount() { return this._arena?.nodeCount ?? this.nodeCount; }
+  get totalNodeCount() { return this.#totalNodeCount; }
+  /** Read allocation state without dispatching to the public getter. */
+  _allocatedNodeCount(): number { return this.#totalNodeCount; }
+  /** Commit the next ID after the arena has reserved its row. */
+  _commitNewNode(): number { return this.#totalNodeCount++; }
   get extraDataCount() { return this._arena?.extraCount ?? this._extraCount; }
   get stringLength() { return this._arena?.stringLength ?? this._stringLength; }
   row(id: number): number { return this._arena === null ? -1 : this._arena.row(id); }
@@ -173,7 +176,7 @@ export class AstView {
     return removed;
   }
   get meta() {
-    return this._editor === null ? this.#meta : parserMeta[this._editor.flags];
+    return parserMeta[this._editor?.flags ?? this._flags];
   }
   get buffer() {
     return this._bytes;

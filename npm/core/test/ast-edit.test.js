@@ -5,6 +5,7 @@ import {
   parseBufferSync,
   readAst,
   AstList,
+  AstView,
   NodeKind,
   Field,
   generateSync,
@@ -182,6 +183,20 @@ test("metadata overrides remain the default for later encoding", () => {
   assert.deepEqual(first[0].slice(-4), flags);
   assert.equal(ast.meta.sourceType, "script");
   expectCode(generateBuffersSync(ast.buffer, ast.editBuffer).code, "value;");
+});
+
+test("borrowed flags do not replace a view's parser metadata", () => {
+  const source = "value;";
+  const module = parseBufferSync(source, { sourceType: "module" });
+  const script = parseBufferSync(source, { sourceType: "script" });
+  const ast = readAst(module);
+  const meta = ast.meta;
+  module.set(script.subarray(-4), module.byteLength - 4);
+
+  assert.equal(ast.meta, meta);
+  assert.equal(ast.meta.sourceType, "module");
+  assert.ok(Object.isFrozen(meta));
+  assert.equal(readAst(module).meta.sourceType, "script");
 });
 
 test("detached appended nodes expose their current child fields", () => {
@@ -401,6 +416,25 @@ test("new native slots use ordinary field setters", () => {
 
   created.name = "updated";
   expectCode(generateBuffersSync(ast.buffer, ast.editBuffer).code, "updated;");
+});
+
+test("an AstView subclass can publish edits from its node count getter", () => {
+  let published;
+  class ObservedAstView extends AstView {
+    get totalNodeCount() {
+      published = this.editBuffer;
+      return super.totalNodeCount;
+    }
+  }
+
+  const ast = new ObservedAstView(parseBufferSync("0;"));
+  const before = ast.totalNodeCount;
+  const first = ast.new_node(NodeKind.NumericLiteral);
+  const second = ast.new_node(NodeKind.StringLiteral);
+  assert.equal(first.nodeId, before);
+  assert.equal(second.nodeId, before + 1);
+  assert.equal(ast.totalNodeCount, before + 2);
+  assert.ok(published.byteLength > 0);
 });
 
 test("native construction preserves parameter containers and live native ranges", () => {
