@@ -2759,12 +2759,17 @@ export class NodeView {
   }
   set source(value: FieldInput<"source">) {
     const ast = this.#ast, id = this.#id;
-    if (this.#version !== ast._editVersion) { this._refresh(); }
-    const kind = this.#kind;
-    switch (kind) {
+    switch (ast.kind(id)) {
       case 76:
       case 107:
         ast._writeNodeAt(id, 0, value);
+        break;
+      case 82:
+      case 84:
+        ast._writeNodeAt(id, 4, value);
+        break;
+      case 77:
+        ast._writeExtraNodeAt(id, 12, 0, value);
         break;
       default: ast.writeNativeField(id, Field.source, value);
     }

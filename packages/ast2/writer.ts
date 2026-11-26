@@ -265,6 +265,21 @@ export function writeNodeAt(ast: AstView, id: number, offset: number, value: unk
   committed(ast);
 }
 
+/** Write a node reference at a constant offset within a node's extra data. */
+export function writeExtraNodeAt(ast: AstView, id: number, pointer: number, slot: number, value: unknown): void {
+  const encoded = referenceId(ast, value);
+  // Importing a foreign node can grow the delta arena before the write.
+  const row = ast.row(id);
+  const view = row === -1 ? ast._view : ast._arena!.view!;
+  const start = view.getUint32(ast._payloadAt(id, row) + pointer, true);
+  const index = start + slot;
+  const limit = start < ast._extraCount ? ast._extraCount : ast.extraDataCount;
+  if (index >= limit) { throw new RangeError("AST extra-data reference out of bounds"); }
+  writeReference(ast, index, encoded);
+  ast._listVersion++;
+  committed(ast);
+}
+
 /** Write a boolean at a constant payload offset. */
 export function writeBoolAt(ast: AstView, id: number, offset: number, value: unknown): void {
   const row = ast.row(id);

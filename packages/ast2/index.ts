@@ -6,7 +6,7 @@ export type { Lang, SourceType } from "@swc-next/types";
 import { layouts, enums, nativeField, NodeKind } from "./schema.ts";
 import { NodeView, createNodeView, createNumericNodeView, NUMERIC_NODE_KIND } from "./node.ts";
 import { cloneNode as cloneNodeInto } from "./clone.ts";
-import { writeType, writeSpan, writeNativeField, finishEdits, writeStringAt, writeNodeAt, writeBoolAt, writeNumberAt, writeEnumAt } from "./writer.ts";
+import { writeType, writeSpan, writeNativeField, finishEdits, writeStringAt, writeNodeAt, writeExtraNodeAt, writeBoolAt, writeNumberAt, writeEnumAt } from "./writer.ts";
 import { fieldLocation, isWellFormed, newNode } from "./storage.ts";
 import { AstList, isList, listAt } from "./list.ts";
 import type { ListEntry } from "./list.ts";
@@ -214,6 +214,9 @@ export class AstView {
   }
   _writeNodeAt(id: number, offset: number, value: unknown): void {
     writeNodeAt(this, id, offset, value);
+  }
+  _writeExtraNodeAt(id: number, pointer: number, slot: number, value: unknown): void {
+    writeExtraNodeAt(this, id, pointer, slot, value);
   }
   _writeBoolAt(id: number, offset: number, value: unknown): void {
     writeBoolAt(this, id, offset, value);

@@ -56,6 +56,7 @@ pub fn ffi2(schema: &Schema) -> Vec<RawOutput> {
     );
     let mut fast_fields: BTreeMap<String, Vec<(usize, String)>> = BTreeMap::new();
     let mut write_fields: BTreeMap<String, Vec<WriteCandidate>> = BTreeMap::new();
+    let mut source_writers: BTreeMap<(Option<usize>, usize), Vec<usize>> = BTreeMap::new();
     let mut extra_counts = Vec::new();
     let mut validator_arms = TokenStream::new();
     let mut count = 0usize;
@@ -102,6 +103,16 @@ pub fn ffi2(schema: &Schema) -> Vec<RawOutput> {
                 writeln!(descriptors, "  {tuple},").unwrap();
             }
             writeln!(metadata, "    [Field.{name}, {descriptor_id}],").unwrap();
+            if name == "source"
+                && desc.starts_with("\"node\",")
+                && field.attrs.invalidates.is_empty()
+            {
+                let pointer = extra.then(|| ast.layout.extra_start_offset().unwrap());
+                source_writers
+                    .entry((pointer, offset))
+                    .or_default()
+                    .push(kind);
+            }
             if !extra && field.attrs.invalidates.is_empty() {
                 let mut parts = desc.split(',');
                 let ty = parts.next().unwrap().trim().trim_matches('"').to_string();
@@ -357,7 +368,27 @@ import type { AstView } from './index.ts';
             )
             .unwrap();
         }
-        if let Some(field) = specialized.get(&name) {
+        if name == "source" && !source_writers.is_empty() {
+            node_js.push_str("  }\n  set source(value: FieldInput<\"source\">) {\n    const ast = this.#ast, id = this.#id;\n    switch (ast.kind(id)) {\n");
+            for (&(pointer, offset), kinds) in &source_writers {
+                for kind in kinds {
+                    writeln!(node_js, "      case {kind}:").unwrap();
+                }
+                if let Some(pointer) = pointer {
+                    writeln!(
+                        node_js,
+                        "        ast._writeExtraNodeAt(id, {pointer}, {offset}, value);"
+                    )
+                    .unwrap();
+                } else {
+                    writeln!(node_js, "        ast._writeNodeAt(id, {offset}, value);").unwrap();
+                }
+                node_js.push_str("        break;\n");
+            }
+            node_js.push_str(
+                "      default: ast.writeNativeField(id, Field.source, value);\n    }\n  }\n",
+            );
+        } else if let Some(field) = specialized.get(&name) {
             writeln!(
                 node_js,
                 "  }}\n  set {name}(value: FieldInput<{name:?}>) {{\n    const ast = this.#ast, id = this.#id;\n    if (this.#version !== ast._editVersion) {{ this._refresh(); }}\n    const kind = this.#kind;\n    switch (kind) {{"

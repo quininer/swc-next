@@ -286,6 +286,17 @@ test("node references clone foreign buffers and reject ordinary objects", () => 
   assert.notEqual(statement.expression.nodeId, foreign.program.body.get(0).expression.nodeId);
   expectCode(generateSync(ast.program).code, "other;");
   expectCode(generateSync(foreign.program).code, "other;");
+
+  const moduleAst = parseSync("", { sourceType: "module" });
+  const declaration = moduleAst.new_node(NodeKind.ImportDeclaration);
+  moduleAst.program.body.push(declaration);
+  const previous = moduleAst.editBuffer.buffer;
+  const specifier = `./${"x".repeat(128)}`;
+  const foreignSource = parseSync(`import "${specifier}";`).program.body.get(0).source;
+  declaration.source = foreignSource;
+  assert.notEqual(moduleAst.editBuffer.buffer, previous);
+  assert.equal(declaration.source.ast, moduleAst);
+  expectCode(generateSync(moduleAst.program).code, `import "${specifier}";`);
 });
 
 test("buffer lists support insertion, removal, replacement and ordering", () => {
