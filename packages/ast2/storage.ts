@@ -58,6 +58,8 @@ export class DeltaArena {
     this.flags = u32(base.flags, "AST flags");
     this.bytes = undefined;
     this.view = undefined;
+    // Intern strings lazily without changing the arena's hidden class.
+    this.stringIds = undefined;
     this.rowsOffset = 8;
     this.metadataOffset = 0;
     this.extraOffset = 8;

@@ -130,6 +130,18 @@ test("native spans and parameter lists retain their owning nodes", () => {
   assert.equal(decoratorAst.materialize().body[0].body.body[0].value.params.items[0].decorators.length, 1);
 });
 
+test("appended node spans remain readable after the first string edit", () => {
+  const ast = parseSync("é;");
+  const node = ast.new_node(NodeKind.StringLiteral, 0, 2);
+  assert.equal(node.end, 1);
+
+  node.value = "changed";
+  assert.equal(node.start, 0);
+  assert.equal(node.end, 1);
+  assert.equal(ast.byteEnd(node.nodeId), 2);
+  assert.equal(node.value, "changed");
+});
+
 test("list growth reuses capacity and updates live references", () => {
   const ast = parseSync("[];");
   const array = ast.program.body.get(0).expression, list = array.elements;
