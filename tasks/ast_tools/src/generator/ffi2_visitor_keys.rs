@@ -63,7 +63,7 @@ pub(crate) fn visitor_keys(schema: &Schema) -> Vec<RawOutput> {
         readers.push(reader.clone());
         writeln!(
             children,
-            "\nfunction {reader}(ast, id, walker, plan, kind) {{"
+            "\nfunction {reader}(ast, id, walker, first, kind) {{"
         )
         .unwrap();
         children.push_str("  let version = ast._editVersion;\n  let row = ast.row(id), payload = ast._payloadAt(id, row);\n  let view = row === -1 ? ast._view : ast._arena.view;\n");
@@ -71,7 +71,7 @@ pub(crate) fn visitor_keys(schema: &Schema) -> Vec<RawOutput> {
             if *list {
                 writeln!(
                     children,
-                    "  if (walker.visitListField(id, Field.{key}, plan.children[{index}])) {{ return true; }}"
+                    "  if (walker.visitListField(id, Field.{key}, first + {index})) {{ return true; }}"
                 )
                 .unwrap();
             } else {
@@ -98,7 +98,7 @@ pub(crate) fn visitor_keys(schema: &Schema) -> Vec<RawOutput> {
                 }
                 writeln!(children, "    if (child !== 0xffffffff && walker.visitScalarId(child, id, Field.{key})) {{ return true; }}\n  }}").unwrap();
             }
-            writeln!(children, "  if (ast._editVersion !== version) {{\n    version = ast._editVersion;\n    const liveKind = ast._kindAt(id);\n    if (liveKind !== kind) {{ return walker.visitRemaining(id, liveKind, plan, {}); }}\n    row = ast.row(id); payload = ast._payloadAt(id, row); view = row === -1 ? ast._view : ast._arena.view;\n  }}", index + 1).unwrap();
+            writeln!(children, "  if (ast._editVersion !== version) {{\n    version = ast._editVersion;\n    const liveKind = ast._kindAt(id);\n    if (liveKind !== kind) {{ return walker.visitRemaining(id, liveKind, first + {}, first + {}); }}\n    row = ast.row(id); payload = ast._payloadAt(id, row); view = row === -1 ? ast._view : ast._arena.view;\n  }}", index + 1, fields.len()).unwrap();
         }
         children.push_str("  return false;\n}\n");
     }

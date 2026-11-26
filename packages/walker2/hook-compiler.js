@@ -2,6 +2,7 @@ import { NodeKind, NodeView } from "@swc-next/ast2";
 
 const baseEntries = Object.values(NodeKind).map(() => ({ enter: null, leave: null }));
 
+export const HAS_HOOK = 1;
 export const SKIP = 1;
 export const REMOVED = 2;
 export const REPLACED = 4;
@@ -25,7 +26,7 @@ export function assertSync(result) {
 }
 
 /** Compile callback order once; each walker supplies its own traversal metadata. */
-export function compile(hooks) {
+export function compile(hooks, kindActions) {
   if (!hooks || typeof hooks !== "object") { throw new TypeError("Expected a hooks object"); }
   const entries = Object.entries(hooks);
   const table = new Map();
@@ -63,8 +64,15 @@ export function compile(hooks) {
   const compact = handlers => handlers.length === 0
     ? null : handlers.length === 1 ? handlers[0] : handlers;
   const compiled = table.size === 0 ? baseEntries : baseEntries.slice();
-  for (const [kind, pair] of table) {
-    compiled[kind] = { enter: compact(pair.enter), leave: compact(pair.leave) };
+  const actions = table.size !== 0 || enter || leave ? kindActions.slice() : kindActions;
+  if (enter || leave) {
+    for (let kind = 0; kind < actions.length; kind++) { actions[kind] |= HAS_HOOK; }
   }
-  return { entries: compiled, globalEnter: enter ?? null, globalLeave: leave ?? null };
+  for (const [kind, pair] of table) {
+    if (pair.enter.length !== 0 || pair.leave.length !== 0) {
+      compiled[kind] = { enter: compact(pair.enter), leave: compact(pair.leave) };
+      actions[kind] |= HAS_HOOK;
+    }
+  }
+  return { entries: compiled, actions, globalEnter: enter ?? null, globalLeave: leave ?? null };
 }

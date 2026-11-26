@@ -16,27 +16,50 @@ import { NodeView } from "@swc-next/ast2";
 import { visitorKeys } from "./visitor-keys.js";
 import { childVisitors } from "./child-visitors.js";
 import { NONE, fieldNames, layouts, nativeField } from "@swc-next/ast2/internal";
-import { compile, assertNode, assertSync, SKIP, REMOVED, REPLACED } from "./hook-compiler.js";
+import { compile, assertNode, assertSync, HAS_HOOK, SKIP, REMOVED, REPLACED } from "./hook-compiler.js";
 
 export { visitorKeys, NONE };
 
+// A child instruction contains a field ID, two flags, the extra pointer
+// offset plus one (zero for inline fields), and the byte or extra-word slot.
+const FIELD_MASK = 0x3ff;
+const OPTIONAL_CHILD = 1 << 10;
+const LIST_CHILD = 1 << 11;
+const POINTER_SHIFT = 12;
+const POINTER_MASK = 0x1f;
+const SLOT_SHIFT = 17;
+
 function childDescriptor(kind, field) {
   const desc = nativeField(kind, field);
-  if (desc === undefined || (desc[2] !== "node" && desc[2] !== "list")) { return null; }
-  return [desc[0] ? layouts[kind].extra : -1, desc[1], desc[3], desc[2] === "list"];
+  if (desc === undefined || (desc[2] !== "node" && desc[2] !== "list")) { return -1; }
+  const pointer = desc[0] ? layouts[kind].extra + 1 : 0;
+  const slot = desc[1];
+  if (field > FIELD_MASK || pointer > POINTER_MASK || slot >= (1 << (31 - SLOT_SHIFT))) {
+    throw new RangeError("Native child descriptor exceeds its encoding");
+  }
+  return field | (desc[3] ? OPTIONAL_CHILD : 0) | (desc[2] === "list" ? LIST_CHILD : 0) |
+    (pointer << POINTER_SHIFT) | (slot << SLOT_SHIFT);
 }
 
-const plans = layouts.map((layout, kind) => {
-  const fields = [];
-  const children = [];
+// The compiled action combines hook presence, instruction count and start.
+// Leaves have no instruction range. The table contains schema data only.
+const COUNT_MASK = 0x7f;
+const START_SHIFT = 8;
+const instructions = [];
+const kindActions = Uint32Array.from(layouts, (layout, kind) => {
+  const start = instructions.length;
   for (const [field] of layout.fields) {
     const descriptor = childDescriptor(kind, field);
-    if (descriptor === null) { continue; }
-    fields.push(field);
-    children.push(descriptor);
+    if (descriptor !== -1) { instructions.push(descriptor); }
   }
-  return { fields, children };
+  const count = instructions.length - start;
+  if (count === 0) { return 0; }
+  if (count > COUNT_MASK || start >= (1 << (32 - START_SHIFT))) {
+    throw new RangeError("Native child program exceeds its encoding");
+  }
+  return (start << START_SHIFT) | (count << 1);
 });
+const childProgram = new Uint32Array(instructions);
 
 function sameNode(node, ast, id) {
   return node !== null && typeof node === "object" && node.ast === ast && node.nodeId === id;
@@ -58,10 +81,11 @@ function readNativeChild(ast, id, descriptor) {
   const payload = ast._payloadAt(id, row);
   let view = row === -1 ? ast._view : ast._arena.view;
   let offset;
-  const pointer = descriptor[0];
+  const pointer = ((descriptor >>> POINTER_SHIFT) & POINTER_MASK) - 1;
+  const slot = descriptor >>> SLOT_SHIFT;
   if (pointer !== -1) {
     const start = view.getUint32(payload + pointer, true);
-    const index = start + descriptor[1];
+    const index = start + slot;
     const limit = start < ast._extraCount ? ast._extraCount : ast.extraDataCount;
     if (index + 1 > limit) {
       throw new RangeError("AST extra-data reference out of bounds");
@@ -69,11 +93,11 @@ function readNativeChild(ast, id, descriptor) {
     view = index < ast._extraCount ? ast._view : ast._arena.view;
     offset = index < ast._extraCount ? ast._extra + index * 4 : ast._arena.extraAddress(index);
   } else {
-    offset = payload + descriptor[1];
+    offset = payload + slot;
   }
   const child = view.getUint32(offset, true);
   if (child === NONE) {
-    if (!descriptor[2]) {
+    if (!(descriptor & OPTIONAL_CHILD)) {
       throw new RangeError("Missing required AST child");
     }
     return NONE;
@@ -94,7 +118,7 @@ class NumericListCursor {
   end = 0;
   version = -1;
   kind = -1;
-  descriptor = null;
+  descriptor = -1;
 
   reset(ast, owner, field, kind, descriptor) {
     this.ast = ast;
@@ -106,7 +130,7 @@ class NumericListCursor {
 
   get length() { return this.end - this.start; }
   nodeId(index) { return this.ast.extraChild(this.owner, this.start + index, true); }
-  clear() { this.ast = null; this.descriptor = null; }
+  clear() { this.ast = null; this.descriptor = -1; }
 }
 
 // One context per walk. Prototype methods keep per-hook closures out of the
@@ -120,6 +144,7 @@ class WalkContext {
   #listCursors = [];
   #depth = 0;
   #entries;
+  #actions;
   #globalEnter;
   #globalLeave;
   #node = null;
@@ -140,6 +165,7 @@ class WalkContext {
     this.#ast = ast;
     this.#state = state;
     this.#entries = compiled.entries;
+    this.#actions = compiled.actions;
     this.#globalEnter = compiled.globalEnter;
     this.#globalLeave = compiled.globalLeave;
     this.#node = null;
@@ -250,7 +276,7 @@ class WalkContext {
       currentId = list.nodeId(frame.index);
     } else {
       const desc = childDescriptor(ast._kindAt(frame.parentId), frame.field);
-      currentId = desc !== null && !desc[3] ? readNativeChild(ast, frame.parentId, desc) : NONE;
+      currentId = desc !== -1 && !(desc & LIST_CHILD) ? readNativeChild(ast, frame.parentId, desc) : NONE;
     }
     if (currentId !== frame.id) {
       throw new Error(
@@ -372,19 +398,20 @@ class WalkContext {
     frame.version = this.#ast._editVersion;
   }
 
-  #traversePlan(id, kind, plan) {
+  #traversePlan(id, kind, action) {
     const ast = this.#ast;
+    const start = action >>> START_SHIFT;
     const reader = childVisitors[kind];
-    if (reader !== null) { reader(ast, id, this, plan, kind); return; }
+    if (reader !== null) { reader(ast, id, this, start, kind); return; }
+    const end = start + ((action >>> 1) & COUNT_MASK);
     let version = ast._editVersion;
-    const { fields, children } = plan;
-    for (let index = 0; index < children.length; index++) {
-      if (this.#visitField(id, fields[index], children[index])) { return; }
+    for (let index = start; index < end; index++) {
+      if (this.#visitField(id, childProgram[index])) { return; }
       if (ast._editVersion !== version) {
         version = ast._editVersion;
         const liveKind = ast._kindAt(id);
         if (liveKind !== kind) {
-          this.#traverseRemaining(id, liveKind, fields, index + 1, version);
+          this.#traverseRemaining(id, liveKind, index + 1, end, version);
           return;
         }
       }
@@ -392,12 +419,11 @@ class WalkContext {
   }
 
   // Preserve the original field order after a descendant changes the parent kind.
-  #traverseRemaining(id, kind, fields, start, version) {
+  #traverseRemaining(id, kind, start, end, version) {
     const ast = this.#ast;
-    for (let index = start; index < fields.length; index++) {
-      const field = fields[index];
-      const descriptor = childDescriptor(kind, field);
-      if (descriptor !== null && this.#visitField(id, field, descriptor)) { return; }
+    for (let index = start; index < end; index++) {
+      const descriptor = childDescriptor(kind, childProgram[index] & FIELD_MASK);
+      if (descriptor !== -1 && this.#visitField(id, descriptor)) { return; }
       if (ast._editVersion !== version) {
         version = ast._editVersion;
         kind = ast._kindAt(id);
@@ -405,8 +431,9 @@ class WalkContext {
     }
   }
 
-  #visitField(id, field, descriptor) {
-    if (descriptor[3]) { return this.#visitList(id, field, descriptor); }
+  #visitField(id, descriptor) {
+    const field = descriptor & FIELD_MASK;
+    if (descriptor & LIST_CHILD) { return this.#visitList(id, field, descriptor); }
     const child = readNativeChild(this.#ast, id, descriptor);
     return child !== NONE && this.visitScalarId(child, id, field);
   }
@@ -416,10 +443,12 @@ class WalkContext {
     const row = ast.row(owner);
     const payload = ast._payloadAt(owner, row);
     let view = row === -1 ? ast._view : ast._arena.view;
-    let offset = payload + descriptor[1];
-    if (descriptor[0] !== -1) {
-      const start = view.getUint32(payload + descriptor[0], true);
-      const index = start + descriptor[1];
+    const pointer = ((descriptor >>> POINTER_SHIFT) & POINTER_MASK) - 1;
+    const slot = descriptor >>> SLOT_SHIFT;
+    let offset = payload + slot;
+    if (pointer !== -1) {
+      const start = view.getUint32(payload + pointer, true);
+      const index = start + slot;
       const limit = start < ast._extraCount ? ast._extraCount : ast.extraDataCount;
       if (index + 2 > limit) { throw new RangeError("AST extra-data reference out of bounds"); }
       view = index < ast._extraCount ? ast._view : ast._arena.view;
@@ -444,7 +473,7 @@ class WalkContext {
     const kind = this.#ast._kindAt(cursor.owner);
     if (kind !== cursor.kind) {
       const descriptor = childDescriptor(kind, cursor.field);
-      if (!descriptor?.[3]) { throw new Error("The current node's container was changed outside the walk context"); }
+      if (descriptor === -1 || !(descriptor & LIST_CHILD)) { throw new Error("The current node's container was changed outside the walk context"); }
       cursor.kind = kind;
       cursor.descriptor = descriptor;
     }
@@ -460,7 +489,11 @@ class WalkContext {
     try {
       for (let index = 0; index < cursor.length; index++) {
         const child = cursor.nodeId(index);
-        if (child !== NONE) { index = this.#visit(child, id, field, cursor, index); }
+        if (child !== NONE) {
+          const kind = ast._kindAt(child);
+          const action = this.#actions[kind];
+          if (action !== 0) { index = this.#visit(child, kind, action, id, field, cursor, index); }
+        }
         if (this.stopped) { return true; }
         if (cursor.version !== ast._listVersion) { this.#syncList(cursor); }
       }
@@ -473,30 +506,29 @@ class WalkContext {
 
   // Entry points for the generated straight-line child readers.
   visitScalarId(child, parent, field) {
+    const kind = this.#ast._kindAt(child);
+    const action = this.#actions[kind];
+    if (action === 0) { return false; }
     this.#ancestors[this.#depth++] = parent;
-    this.#visit(child, parent, field, null, 0);
+    this.#visit(child, kind, action, parent, field, null, 0);
     this.#depth--;
     return this.stopped;
   }
 
-  visitListField(id, field, descriptor) {
-    return this.#visitList(id, field, descriptor);
+  visitListField(id, field, index) {
+    return this.#visitList(id, field, childProgram[index]);
   }
 
-  visitRemaining(id, kind, plan, index) {
-    this.#traverseRemaining(id, kind, plan.fields, index, this.#ast._editVersion);
+  visitRemaining(id, kind, start, end) {
+    this.#traverseRemaining(id, kind, start, end, this.#ast._editVersion);
     return this.stopped;
   }
 
-  #visit(id, parentId, field, list, index) {
+  #visit(id, kind, action, parentId, field, list, index) {
     const ast = this.#ast;
-    const kind = ast._kindAt(id);
-    const plan = plans[kind];
-    const entry = this.#entries[kind];
-    if (entry.enter === null && entry.leave === null && this.#globalEnter === null && this.#globalLeave === null) {
-      if (plan.children.length === 0) { return index; }
+    if (!(action & HAS_HOOK)) {
       const version = ast._editVersion;
-      this.#traversePlan(id, kind, plan);
+      this.#traversePlan(id, kind, action);
       if (!this.stopped && ast._editVersion !== version) {
         const liveKind = ast._kindAt(id);
         const leave = this.#entries[liveKind].leave;
@@ -508,17 +540,17 @@ class WalkContext {
       }
       return index;
     }
-    return this.#visitHooked(id, kind, plan, entry, parentId, field, list, index);
+    return this.#visitHooked(id, kind, action, this.#entries[kind], parentId, field, list, index);
   }
 
-  #visitHooked(id, kind, plan, entry, parentId, field, list, index) {
+  #visitHooked(id, kind, action, entry, parentId, field, list, index) {
     const ast = this.#ast;
     const frame = this.#storage;
     let after = 0;
     let skip = false;
     let currentId = id;
     let currentKind = kind;
-    let currentPlan = plan;
+    let currentAction = action;
     let currentEntry = entry;
     const enter = entry.enter ?? this.#globalEnter;
     if (enter !== null) {
@@ -542,15 +574,15 @@ class WalkContext {
       if (frame.id !== currentId || ast._editVersion !== version) {
         currentId = frame.id;
         currentKind = ast._kindAt(currentId);
-        currentPlan = plans[currentKind];
+        currentAction = this.#actions[currentKind];
         currentEntry = this.#entries[currentKind];
       }
       after = frame.after;
       skip = frame.flags & SKIP;
     }
-    if (!skip && currentPlan.children.length !== 0) {
+    if (!skip && (currentAction >>> 1) !== 0) {
       const version = ast._editVersion;
-      this.#traversePlan(currentId, currentKind, currentPlan);
+      this.#traversePlan(currentId, currentKind, currentAction);
       if (this.stopped) { return index; }
       if (ast._editVersion !== version) {
         currentKind = ast._kindAt(currentId);
@@ -577,7 +609,9 @@ class WalkContext {
   }
 
   visitRoot(id) {
-    this.#visit(id, NONE, 0, null, 0);
+    const kind = this.#ast._kindAt(id);
+    const action = this.#actions[kind];
+    if (action !== 0) { this.#visit(id, kind, action, NONE, 0, null, 0); }
   }
 
   reset() {
@@ -596,7 +630,7 @@ class WalkContext {
     this.#storage.parentId = NONE;
     this.#storage.field = 0;
     this.#storage.list = null;
-    this.#entries = this.#globalEnter = this.#globalLeave = undefined;
+    this.#actions = this.#entries = this.#globalEnter = this.#globalLeave = undefined;
     this.stopped = false;
   }
 }
@@ -632,7 +666,7 @@ function runWalk(root, compiled, state) {
  * @returns {import("@swc-next/ast2").NodeView} root
  */
 export function walk(root, hooks, state) {
-  return runWalk(root, compile(hooks), state);
+  return runWalk(root, compile(hooks, kindActions), state);
 }
 
 /**
@@ -640,7 +674,7 @@ export function walk(root, hooks, state) {
  * @param {object} hooks
  */
 export function createWalker(hooks) {
-  const compiled = compile(hooks);
+  const compiled = compile(hooks, kindActions);
   return Object.freeze({
     walk(root, state) {
       return runWalk(root, compiled, state);
