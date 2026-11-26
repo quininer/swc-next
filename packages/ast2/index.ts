@@ -258,7 +258,7 @@ export class AstView {
   }
   /** Views already hold a validated logical ID; original slots read directly. */
   _kindAt(id: number): number {
-    const kind = id < this.#nodeCount ? this._bytes[this._kinds + id] : this._arena!.kind(id);
+    const kind = id < this.#nodeCount ? this._bytes[this._kinds + (id >>> 0)] : this._arena!.kind(id);
     if (kind === undefined || kind >= layouts.length) { throw new RangeError("Unknown AST node kind"); }
     return kind;
   }
