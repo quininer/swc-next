@@ -133,6 +133,9 @@ class NumericListCursor {
   clear() { this.ast = null; this.descriptor = -1; }
 }
 
+// Use an internal small-integer marker; the public sentinel remains NONE.
+const NO_PARENT = -1;
+
 // One context per walk. Prototype methods keep per-hook closures out of the
 // traversal; private fields keep the storage shape stable across walks.
 class WalkContext {
@@ -150,7 +153,7 @@ class WalkContext {
   #node = null;
   #storage = {
     id: 0,
-    parentId: NONE,
+    parentId: NO_PARENT,
     field: 0,
     list: null,
     index: 0,
@@ -184,7 +187,8 @@ class WalkContext {
     return this.#check().id;
   }
   get parentId() {
-    return this.#check().parentId;
+    const parent = this.#check().parentId;
+    return parent === NO_PARENT ? NONE : parent;
   }
   get type() { return layouts[this.kind].name; }
   get kind() {
@@ -215,7 +219,7 @@ class WalkContext {
   }
   get parent() {
     const frame = this.#check();
-    return frame.parentId === NONE ? null : this.#ast._nodeAt(frame.parentId);
+    return frame.parentId === NO_PARENT ? null : this.#ast._nodeAt(frame.parentId);
   }
   ancestors() {
     this.#check();
@@ -246,7 +250,7 @@ class WalkContext {
     if (frame.flags & REMOVED) {
       throw new Error("The current node has been removed");
     }
-    if (frame.parentId === NONE) {
+    if (frame.parentId === NO_PARENT) {
       throw new Error("Cannot structurally edit the walk root");
     }
     const ast = this.#ast;
@@ -611,7 +615,7 @@ class WalkContext {
   visitRoot(id) {
     const kind = this.#ast._kindAt(id);
     const action = this.#actions[kind];
-    if (action !== 0) { this.#visit(id, kind, action, NONE, 0, null, 0); }
+    if (action !== 0) { this.#visit(id, kind, action, NO_PARENT, 0, null, 0); }
   }
 
   reset() {
@@ -627,7 +631,7 @@ class WalkContext {
     if (this.#listCursors.length > 128) { this.#listCursors.length = 128; }
     this.#depth = 0;
     this.#storage.id = 0;
-    this.#storage.parentId = NONE;
+    this.#storage.parentId = NO_PARENT;
     this.#storage.field = 0;
     this.#storage.list = null;
     this.#actions = this.#entries = this.#globalEnter = this.#globalLeave = undefined;
