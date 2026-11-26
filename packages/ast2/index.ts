@@ -314,6 +314,9 @@ export class AstView {
     const kind = id < this.#nodeCount
       ? this._view.getUint8(this._kinds + id)
       : this.kind(id);
+    return this.#wrapNodeView(id, kind);
+  }
+  #wrapNodeView(id: number, kind: number): NodeView {
     if (kind >= layouts.length) { throw new RangeError("Unknown AST node kind"); }
     this._createdNodeCount++;
     return kind === NUMERIC_NODE_KIND ? createNumericNodeView(this, id, kind) : new NodeView(this, id, kind);
@@ -351,6 +354,22 @@ export class AstView {
     if (child >= this.totalNodeCount) { throw new RangeError("AST child out of bounds"); }
     return child;
   }
+  /** Read and wrap a child reference without checking the absent ID twice. */
+  _childViewAt(offset: number, optional: boolean, view = this._view): NodeView | null {
+    const child = view.getInt32(offset, true);
+    if (child >= 0 && child < this.#nodeCount) {
+      return this.#wrapNodeView(child, this._view.getUint8(this._kinds + child));
+    }
+    return this.#extendedChildView(child >>> 0, optional);
+  }
+  #extendedChildView(child: number, optional: boolean): NodeView | null {
+    if (child === 0xffffffff) {
+      if (!optional) { throw new RangeError("Missing required AST child"); }
+      return null;
+    }
+    if (child >= this.totalNodeCount) { throw new RangeError("AST child out of bounds"); }
+    return this.#wrapNodeView(child, this.kind(child));
+  }
   ref(id: number, slot: number, allowMissing = false): number {
     const field = this.fieldOffset(id, slot);
     if (!field) { return NONE; }
@@ -385,10 +404,7 @@ export class AstView {
   _valueAt(id: number, field: number, descriptor: FieldDescriptor, kind: number): unknown {
     const { view, offset } = fieldLocation(this, id, descriptor, kind);
     const type = descriptor[2], optional = descriptor[3];
-    if (type === "node") {
-      const child = this.childAt(id, offset, optional, view);
-      return this._nodeAt(child);
-    }
+    if (type === "node") { return this._childViewAt(offset, optional, view); }
     if (type === "list") { return this.list(id, field); }
     if (type === "string") { return this.stringAt(offset, optional, view); }
     if (type.startsWith("enum:")) { return this.enumAt(offset, type.slice(5), optional, view); }

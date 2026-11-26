@@ -149,9 +149,9 @@ export class NodeView {
     const view = row === -1 ? ast._view : ast._arena!.view!;
     switch (kind) {
       case 23:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"alternate">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"alternate">;
       case 29:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, true, view))) as NodeField<"alternate">;
+        return (ast._childViewAt(offset + 8, true, view)) as NodeField<"alternate">;
       default: return ast.value(this.#id, Field.alternate, kind) as NodeField<"alternate">;
     }
   }
@@ -181,12 +181,12 @@ export class NodeView {
       case 63:
       case 73:
       case 171:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"argument">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"argument">;
       case 41:
       case 74:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, true, view))) as NodeField<"argument">;
+        return (ast._childViewAt(offset + 0, true, view)) as NodeField<"argument">;
       case 60:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"argument">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"argument">;
       default: return ast.value(this.#id, Field.argument, kind) as NodeField<"argument">;
     }
   }
@@ -278,7 +278,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, true, view))) as NodeField<"attributes">;
+        return (ast._childViewAt(offset + 4, true, view)) as NodeField<"attributes">;
       }
       default: return ast.value(this.#id, Field.attributes, kind) as NodeField<"attributes">;
     }
@@ -330,7 +330,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"block">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"block">;
       }
       default: return ast.value(this.#id, Field.block, kind) as NodeField<"block">;
     }
@@ -355,29 +355,29 @@ export class NodeView {
     const view = row === -1 ? ast._view : ast._arena!.view!;
     switch (kind) {
       case 56:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"body">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"body">;
       case 32:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 12, false, view))) as NodeField<"body">;
+        return (ast._childViewAt(offset + 12, false, view)) as NodeField<"body">;
       case 39:
       case 55:
       case 57:
       case 143:
       case 148:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"body">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"body">;
       case 33:
       case 34:
       case 36:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"body">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"body">;
       case 146:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, true, view))) as NodeField<"body">;
+        return (ast._childViewAt(offset + 8, true, view)) as NodeField<"body">;
       case 66:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.body, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 1), false, view))) as NodeField<"body">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.body, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 1), false, view)) as NodeField<"body">;
       case 139:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.body, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 2), false, view))) as NodeField<"body">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.body, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 2), false, view)) as NodeField<"body">;
       case 52:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.body, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 3), false, view))) as NodeField<"body">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.body, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 3), false, view)) as NodeField<"body">;
       case 47:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.body, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 6), false, view))) as NodeField<"body">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.body, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 6), false, view)) as NodeField<"body">;
       default: return ast.value(this.#id, Field.body, kind) as NodeField<"body">;
     }
   }
@@ -405,9 +405,9 @@ export class NodeView {
     const view = row === -1 ? ast._view : ast._arena!.view!;
     switch (kind) {
       case 69:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"callee">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"callee">;
       case 72:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"callee">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"callee">;
       default: return ast.value(this.#id, Field.callee, kind) as NodeField<"callee">;
     }
   }
@@ -439,7 +439,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"checkType">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"checkType">;
       }
       default: return ast.value(this.#id, Field.checkType, kind) as NodeField<"checkType">;
     }
@@ -498,7 +498,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 12, true, view))) as NodeField<"closingElement">;
+        return (ast._childViewAt(offset + 12, true, view)) as NodeField<"closingElement">;
       }
       default: return ast.value(this.#id, Field.closingElement, kind) as NodeField<"closingElement">;
     }
@@ -524,7 +524,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 12, false, view))) as NodeField<"closingFragment">;
+        return (ast._childViewAt(offset + 12, false, view)) as NodeField<"closingFragment">;
       }
       default: return ast.value(this.#id, Field.closingFragment, kind) as NodeField<"closingFragment">;
     }
@@ -589,7 +589,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"consequent">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"consequent">;
       }
       default: return ast.value(this.#id, Field.consequent, kind) as NodeField<"consequent">;
     }
@@ -641,9 +641,9 @@ export class NodeView {
     const view = row === -1 ? ast._view : ast._arena!.view!;
     switch (kind) {
       case 132:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"constraint">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"constraint">;
       case 108:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, true, view))) as NodeField<"constraint">;
+        return (ast._childViewAt(offset + 4, true, view)) as NodeField<"constraint">;
       default: return ast.value(this.#id, Field.constraint, kind) as NodeField<"constraint">;
     }
   }
@@ -693,9 +693,9 @@ export class NodeView {
     const view = row === -1 ? ast._view : ast._arena!.view!;
     switch (kind) {
       case 83:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"declaration">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"declaration">;
       case 82:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, true, view))) as NodeField<"declaration">;
+        return (ast._childViewAt(offset + 0, true, view)) as NodeField<"declaration">;
       default: return ast.value(this.#id, Field.declaration, kind) as NodeField<"declaration">;
     }
   }
@@ -772,7 +772,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, true, view))) as NodeField<"default">;
+        return (ast._childViewAt(offset + 8, true, view)) as NodeField<"default">;
       }
       default: return ast.value(this.#id, Field.default, kind) as NodeField<"default">;
     }
@@ -857,7 +857,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"discriminant">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"discriminant">;
       }
       default: return ast.value(this.#id, Field.discriminant, kind) as NodeField<"discriminant">;
     }
@@ -882,9 +882,9 @@ export class NodeView {
     const view = row === -1 ? ast._view : ast._arena!.view!;
     switch (kind) {
       case 113:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"elementType">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"elementType">;
       case 116:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"elementType">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"elementType">;
       default: return ast.value(this.#id, Field.elementType, kind) as NodeField<"elementType">;
     }
   }
@@ -952,9 +952,9 @@ export class NodeView {
     const view = row === -1 ? ast._view : ast._arena!.view!;
     switch (kind) {
       case 84:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, true, view))) as NodeField<"exported">;
+        return (ast._childViewAt(offset + 0, true, view)) as NodeField<"exported">;
       case 85:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"exported">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"exported">;
       default: return ast.value(this.#id, Field.exported, kind) as NodeField<"exported">;
     }
   }
@@ -979,7 +979,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"exprName">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"exprName">;
       }
       default: return ast.value(this.#id, Field.exprName, kind) as NodeField<"exprName">;
     }
@@ -1017,11 +1017,11 @@ export class NodeView {
       case 159:
       case 172:
       case 175:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"expression">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"expression">;
       case 153:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"expression">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"expression">;
       case 45:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"expression">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"expression">;
       case 66:
         return (view.getUint8(offset + 8) !== 0) as NodeField<"expression">;
       default: return ast.value(this.#id, Field.expression, kind) as NodeField<"expression">;
@@ -1075,7 +1075,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"extendsType">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"extendsType">;
       }
       default: return ast.value(this.#id, Field.extendsType, kind) as NodeField<"extendsType">;
     }
@@ -1101,7 +1101,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 12, false, view))) as NodeField<"falseType">;
+        return (ast._childViewAt(offset + 12, false, view)) as NodeField<"falseType">;
       }
       default: return ast.value(this.#id, Field.falseType, kind) as NodeField<"falseType">;
     }
@@ -1127,7 +1127,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, true, view))) as NodeField<"finalizer">;
+        return (ast._childViewAt(offset + 8, true, view)) as NodeField<"finalizer">;
       }
       default: return ast.value(this.#id, Field.finalizer, kind) as NodeField<"finalizer">;
     }
@@ -1231,7 +1231,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, true, view))) as NodeField<"handler">;
+        return (ast._childViewAt(offset + 4, true, view)) as NodeField<"handler">;
       }
       default: return ast.value(this.#id, Field.handler, kind) as NodeField<"handler">;
     }
@@ -1257,7 +1257,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, true, view))) as NodeField<"hashbang">;
+        return (ast._childViewAt(offset + 8, true, view)) as NodeField<"hashbang">;
       }
       default: return ast.value(this.#id, Field.hashbang, kind) as NodeField<"hashbang">;
     }
@@ -1281,7 +1281,7 @@ export class NodeView {
       const row = ast.row(this.#id);
       const offset = ast._payloadAt(this.#id, row);
       const view = row === -1 ? ast._view : ast._arena!.view!;
-      return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"id">;
+      return (ast._childViewAt(offset + 0, false, view)) as NodeField<"id">;
     }
     return this._idRest(kind);
   }
@@ -1294,7 +1294,7 @@ export class NodeView {
       case 47:
       case 52:
       case 87:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, true, view))) as NodeField<"id">;
+        return (ast._childViewAt(offset + 0, true, view)) as NodeField<"id">;
       default: return ast.value(this.#id, Field.id, kind) as NodeField<"id">;
     }
   }
@@ -1364,7 +1364,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"imported">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"imported">;
       }
       default: return ast.value(this.#id, Field.imported, kind) as NodeField<"imported">;
     }
@@ -1416,7 +1416,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"indexType">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"indexType">;
       }
       default: return ast.value(this.#id, Field.indexType, kind) as NodeField<"indexType">;
     }
@@ -1441,9 +1441,9 @@ export class NodeView {
     const view = row === -1 ? ast._view : ast._arena!.view!;
     switch (kind) {
       case 32:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, true, view))) as NodeField<"init">;
+        return (ast._childViewAt(offset + 0, true, view)) as NodeField<"init">;
       case 28:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, true, view))) as NodeField<"init">;
+        return (ast._childViewAt(offset + 8, true, view)) as NodeField<"init">;
       default: return ast.value(this.#id, Field.init, kind) as NodeField<"init">;
     }
   }
@@ -1467,9 +1467,9 @@ export class NodeView {
     const view = row === -1 ? ast._view : ast._arena!.view!;
     switch (kind) {
       case 145:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, true, view))) as NodeField<"initializer">;
+        return (ast._childViewAt(offset + 4, true, view)) as NodeField<"initializer">;
       case 59:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.initializer, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 2), true, view))) as NodeField<"initializer">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.initializer, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 2), true, view)) as NodeField<"initializer">;
       default: return ast.value(this.#id, Field.initializer, kind) as NodeField<"initializer">;
     }
   }
@@ -1559,9 +1559,9 @@ export class NodeView {
       case 132:
       case 133:
       case 134:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"key">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"key">;
       case 50:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.key, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 2), false, view))) as NodeField<"key">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.key, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 2), false, view)) as NodeField<"key">;
       default: return ast.value(this.#id, Field.key, kind) as NodeField<"key">;
     }
   }
@@ -1629,10 +1629,10 @@ export class NodeView {
     switch (kind) {
       case 39:
       case 116:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"label">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"label">;
       case 37:
       case 38:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, true, view))) as NodeField<"label">;
+        return (ast._childViewAt(offset + 0, true, view)) as NodeField<"label">;
       default: return ast.value(this.#id, Field.label, kind) as NodeField<"label">;
     }
   }
@@ -1664,7 +1664,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"left">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"left">;
       }
       default: return ast.value(this.#id, Field.left, kind) as NodeField<"left">;
     }
@@ -1696,7 +1696,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"literal">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"literal">;
       }
       default: return ast.value(this.#id, Field.literal, kind) as NodeField<"literal">;
     }
@@ -1723,9 +1723,9 @@ export class NodeView {
       case 79:
       case 80:
       case 85:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"local">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"local">;
       case 78:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"local">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"local">;
       default: return ast.value(this.#id, Field.local, kind) as NodeField<"local">;
     }
   }
@@ -1759,7 +1759,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"meta">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"meta">;
       }
       default: return ast.value(this.#id, Field.meta, kind) as NodeField<"meta">;
     }
@@ -1811,7 +1811,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"moduleReference">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"moduleReference">;
       }
       default: return ast.value(this.#id, Field.moduleReference, kind) as NodeField<"moduleReference">;
     }
@@ -1850,9 +1850,9 @@ export class NodeView {
       case 162:
       case 163:
       case 170:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"name">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"name">;
       case 168:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"name">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"name">;
       default: return ast.value(this.#id, Field.name, kind) as NodeField<"name">;
     }
   }
@@ -1882,7 +1882,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.nameType, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 0), true, view))) as NodeField<"nameType">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.nameType, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 0), true, view)) as NodeField<"nameType">;
       }
       default: return ast.value(this.#id, Field.nameType, kind) as NodeField<"nameType">;
     }
@@ -1898,7 +1898,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"namespace">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"namespace">;
       }
       default: return ast.value(this.#id, Field.namespace, kind) as NodeField<"namespace">;
     }
@@ -1926,7 +1926,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"object">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"object">;
       }
       default: return ast.value(this.#id, Field.object, kind) as NodeField<"object">;
     }
@@ -1954,7 +1954,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"objectType">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"objectType">;
       }
       default: return ast.value(this.#id, Field.objectType, kind) as NodeField<"objectType">;
     }
@@ -1980,7 +1980,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"openingElement">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"openingElement">;
       }
       default: return ast.value(this.#id, Field.openingElement, kind) as NodeField<"openingElement">;
     }
@@ -2006,7 +2006,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"openingFragment">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"openingFragment">;
       }
       default: return ast.value(this.#id, Field.openingFragment, kind) as NodeField<"openingFragment">;
     }
@@ -2108,7 +2108,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, true, view))) as NodeField<"options">;
+        return (ast._childViewAt(offset + 4, true, view)) as NodeField<"options">;
       }
       default: return ast.value(this.#id, Field.options, kind) as NodeField<"options">;
     }
@@ -2191,7 +2191,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, true, view))) as NodeField<"param">;
+        return (ast._childViewAt(offset + 0, true, view)) as NodeField<"param">;
       }
       default: return ast.value(this.#id, Field.param, kind) as NodeField<"param">;
     }
@@ -2217,7 +2217,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"parameter">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"parameter">;
       }
       default: return ast.value(this.#id, Field.parameter, kind) as NodeField<"parameter">;
     }
@@ -2243,7 +2243,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"parameterName">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"parameterName">;
       }
       default: return ast.value(this.#id, Field.parameterName, kind) as NodeField<"parameterName">;
     }
@@ -2277,14 +2277,14 @@ export class NodeView {
       case 66:
       case 129:
       case 136:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"params">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"params">;
       case 128:
       case 135:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"params">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"params">;
       case 52:
       case 87:
       case 134:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.params, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 1), false, view))) as NodeField<"params">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.params, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 1), false, view)) as NodeField<"params">;
       default: return ast.value(this.#id, Field.params, kind) as NodeField<"params">;
     }
   }
@@ -2310,7 +2310,7 @@ export class NodeView {
     const view = row === -1 ? ast._view : ast._arena!.view!;
     switch (kind) {
       case 59:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"pattern">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"pattern">;
       case 8:
         return (ast.stringAt(offset + 0, false, view)) as NodeField<"pattern">;
       default: return ast.value(this.#id, Field.pattern, kind) as NodeField<"pattern">;
@@ -2416,7 +2416,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"property">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"property">;
       }
       default: return ast.value(this.#id, Field.property, kind) as NodeField<"property">;
     }
@@ -2470,7 +2470,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, true, view))) as NodeField<"qualifier">;
+        return (ast._childViewAt(offset + 8, true, view)) as NodeField<"qualifier">;
       }
       default: return ast.value(this.#id, Field.qualifier, kind) as NodeField<"qualifier">;
     }
@@ -2496,7 +2496,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"quasi">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"quasi">;
       }
       default: return ast.value(this.#id, Field.quasi, kind) as NodeField<"quasi">;
     }
@@ -2593,7 +2593,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, true, view))) as NodeField<"rest">;
+        return (ast._childViewAt(offset + 8, true, view)) as NodeField<"rest">;
       }
       default: return ast.value(this.#id, Field.rest, kind) as NodeField<"rest">;
     }
@@ -2620,19 +2620,19 @@ export class NodeView {
     const view = row === -1 ? ast._view : ast._arena!.view!;
     switch (kind) {
       case 128:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 12, false, view))) as NodeField<"returnType">;
+        return (ast._childViewAt(offset + 12, false, view)) as NodeField<"returnType">;
       case 135:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 12, true, view))) as NodeField<"returnType">;
+        return (ast._childViewAt(offset + 12, true, view)) as NodeField<"returnType">;
       case 129:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"returnType">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"returnType">;
       case 136:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, true, view))) as NodeField<"returnType">;
+        return (ast._childViewAt(offset + 8, true, view)) as NodeField<"returnType">;
       case 66:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.returnType, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 0), true, view))) as NodeField<"returnType">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.returnType, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 0), true, view)) as NodeField<"returnType">;
       case 52:
       case 87:
       case 134:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.returnType, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 2), true, view))) as NodeField<"returnType">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.returnType, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 2), true, view)) as NodeField<"returnType">;
       default: return ast.value(this.#id, Field.returnType, kind) as NodeField<"returnType">;
     }
   }
@@ -2663,7 +2663,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"right">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"right">;
       }
       default: return ast.value(this.#id, Field.right, kind) as NodeField<"right">;
     }
@@ -2747,13 +2747,13 @@ export class NodeView {
     switch (kind) {
       case 76:
       case 107:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"source">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"source">;
       case 84:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"source">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"source">;
       case 82:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, true, view))) as NodeField<"source">;
+        return (ast._childViewAt(offset + 4, true, view)) as NodeField<"source">;
       case 77:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.source, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 0), false, view))) as NodeField<"source">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.source, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 0), false, view)) as NodeField<"source">;
       default: return ast.value(this.#id, Field.source, kind) as NodeField<"source">;
     }
   }
@@ -2821,7 +2821,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.superClass, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 2), true, view))) as NodeField<"superClass">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.superClass, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 2), true, view)) as NodeField<"superClass">;
       }
       default: return ast.value(this.#id, Field.superClass, kind) as NodeField<"superClass">;
     }
@@ -2837,7 +2837,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.superTypeArguments, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 3), true, view))) as NodeField<"superTypeArguments">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.superTypeArguments, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 3), true, view)) as NodeField<"superTypeArguments">;
       }
       default: return ast.value(this.#id, Field.superTypeArguments, kind) as NodeField<"superTypeArguments">;
     }
@@ -2879,7 +2879,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"tag">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"tag">;
       }
       default: return ast.value(this.#id, Field.tag, kind) as NodeField<"tag">;
     }
@@ -2932,13 +2932,13 @@ export class NodeView {
       case 23:
       case 29:
       case 55:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"test">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"test">;
       case 56:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"test">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"test">;
       case 32:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, true, view))) as NodeField<"test">;
+        return (ast._childViewAt(offset + 4, true, view)) as NodeField<"test">;
       case 31:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, true, view))) as NodeField<"test">;
+        return (ast._childViewAt(offset + 8, true, view)) as NodeField<"test">;
       default: return ast.value(this.#id, Field.test, kind) as NodeField<"test">;
     }
   }
@@ -2965,11 +2965,11 @@ export class NodeView {
     switch (kind) {
       case 128:
       case 135:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, true, view))) as NodeField<"thisParam">;
+        return (ast._childViewAt(offset + 4, true, view)) as NodeField<"thisParam">;
       case 52:
       case 87:
       case 134:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.thisParam, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 0), true, view))) as NodeField<"thisParam">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.thisParam, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 0), true, view)) as NodeField<"thisParam">;
       default: return ast.value(this.#id, Field.thisParam, kind) as NodeField<"thisParam">;
     }
   }
@@ -2995,7 +2995,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"trueType">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"trueType">;
       }
       default: return ast.value(this.#id, Field.trueType, kind) as NodeField<"trueType">;
     }
@@ -3027,28 +3027,28 @@ export class NodeView {
       case 126:
       case 127:
       case 153:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"typeAnnotation">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"typeAnnotation">;
       case 150:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, true, view))) as NodeField<"typeAnnotation">;
+        return (ast._childViewAt(offset + 0, true, view)) as NodeField<"typeAnnotation">;
       case 60:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 12, true, view))) as NodeField<"typeAnnotation">;
+        return (ast._childViewAt(offset + 12, true, view)) as NodeField<"typeAnnotation">;
       case 151:
       case 152:
       case 160:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"typeAnnotation">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"typeAnnotation">;
       case 28:
       case 36:
       case 59:
       case 130:
       case 133:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, true, view))) as NodeField<"typeAnnotation">;
+        return (ast._childViewAt(offset + 4, true, view)) as NodeField<"typeAnnotation">;
       case 137:
       case 138:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, false, view))) as NodeField<"typeAnnotation">;
+        return (ast._childViewAt(offset + 8, false, view)) as NodeField<"typeAnnotation">;
       case 132:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.typeAnnotation, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 1), true, view))) as NodeField<"typeAnnotation">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.typeAnnotation, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 1), true, view)) as NodeField<"typeAnnotation">;
       case 50:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.typeAnnotation, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 3), true, view))) as NodeField<"typeAnnotation">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.typeAnnotation, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 3), true, view)) as NodeField<"typeAnnotation">;
       default: return ast.value(this.#id, Field.typeAnnotation, kind) as NodeField<"typeAnnotation">;
     }
   }
@@ -3080,9 +3080,9 @@ export class NodeView {
     switch (kind) {
       case 72:
       case 107:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 12, true, view))) as NodeField<"typeArguments">;
+        return (ast._childViewAt(offset + 12, true, view)) as NodeField<"typeArguments">;
       case 155:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"typeArguments">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"typeArguments">;
       case 69:
       case 71:
       case 104:
@@ -3090,7 +3090,7 @@ export class NodeView {
       case 141:
       case 142:
       case 162:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, true, view))) as NodeField<"typeArguments">;
+        return (ast._childViewAt(offset + 4, true, view)) as NodeField<"typeArguments">;
       default: return ast.value(this.#id, Field.typeArguments, kind) as NodeField<"typeArguments">;
     }
   }
@@ -3121,7 +3121,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"typeName">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"typeName">;
       }
       default: return ast.value(this.#id, Field.typeName, kind) as NodeField<"typeName">;
     }
@@ -3147,7 +3147,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, false, view))) as NodeField<"typeParameter">;
+        return (ast._childViewAt(offset + 0, false, view)) as NodeField<"typeParameter">;
       }
       default: return ast.value(this.#id, Field.typeParameter, kind) as NodeField<"typeParameter">;
     }
@@ -3176,14 +3176,14 @@ export class NodeView {
       case 129:
       case 135:
       case 136:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 0, true, view))) as NodeField<"typeParameters">;
+        return (ast._childViewAt(offset + 0, true, view)) as NodeField<"typeParameters">;
       case 47:
       case 52:
       case 87:
       case 134:
       case 138:
       case 139:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, true, view))) as NodeField<"typeParameters">;
+        return (ast._childViewAt(offset + 4, true, view)) as NodeField<"typeParameters">;
       default: return ast.value(this.#id, Field.typeParameters, kind) as NodeField<"typeParameters">;
     }
   }
@@ -3220,7 +3220,7 @@ export class NodeView {
         const row = ast.row(this.#id);
         const offset = ast._payloadAt(this.#id, row);
         const view = row === -1 ? ast._view : ast._arena!.view!;
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 8, true, view))) as NodeField<"update">;
+        return (ast._childViewAt(offset + 8, true, view)) as NodeField<"update">;
       }
       default: return ast.value(this.#id, Field.update, kind) as NodeField<"update">;
     }
@@ -3247,9 +3247,9 @@ export class NodeView {
       case 20:
       case 64:
       case 81:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, false, view))) as NodeField<"value">;
+        return (ast._childViewAt(offset + 4, false, view)) as NodeField<"value">;
       case 170:
-        return (ast._nodeAt(ast.childAt(this.#id, offset + 4, true, view))) as NodeField<"value">;
+        return (ast._childViewAt(offset + 4, true, view)) as NodeField<"value">;
       case 3:
       case 45:
       case 86:
@@ -3257,9 +3257,9 @@ export class NodeView {
         return (ast.stringAt(offset + 0, false, view)) as NodeField<"value">;
       case 49:
       case 88:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.value, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 2), false, view))) as NodeField<"value">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.value, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 2), false, view)) as NodeField<"value">;
       case 50:
-        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.value, kind) : ast._nodeAt(ast.childAt(this.#id, ast.extraOffset(offset, 12, 4), true, view))) as NodeField<"value">;
+        return (this.#id >= ast.nodeCount || view.getUint32(offset + 12, true) >= ast._extraCount ? ast.value(this.#id, Field.value, kind) : ast._childViewAt(ast.extraOffset(offset, 12, 4), true, view)) as NodeField<"value">;
       case 4:
         return (view.getFloat64(offset + 0, true)) as NodeField<"value">;
       case 6:

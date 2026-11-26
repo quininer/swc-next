@@ -307,7 +307,7 @@ import type { AstView } from './index.ts';
                 "id" => groups
                     .iter()
                     .find(|(expression, _)| {
-                        expression.contains("ast._nodeAt") && expression.contains("false")
+                        expression.contains("ast._childViewAt") && expression.contains("false")
                     })
                     .map(|(expression, kinds)| (*expression, kinds.clone())),
                 _ => None,
@@ -600,7 +600,7 @@ fn fast_field_expression(
         "u32" => format!("view.getUint32({address}, true)"),
         "i32" => format!("view.getInt32({address}, true)"),
         "f64" => format!("view.getFloat64({address}, true)"),
-        "node" => format!("ast._nodeAt(ast.childAt(this.#id, {address}, {optional}, view))"),
+        "node" => format!("ast._childViewAt({address}, {optional}, view)"),
         "string" => format!("ast.stringAt({address}, {optional}, view)"),
         value if value.starts_with("enum:") => {
             format!("ast.enumAt({address}, {:?}, {optional}, view)", &value[5..])
