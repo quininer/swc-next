@@ -1,6 +1,6 @@
 import type { AstView } from "./index.ts";
 import type { FieldDescriptor } from "./types.ts";
-import { layouts, nativeExtraCounts, nativeField } from "./schema.ts";
+import { layouts, nativeExtraCounts, nativeField, NodeKind } from "./schema.ts";
 import { initialFields } from "./protocol.ts";
 import { NONE, NONE as U32_MAX, ROW_SIZE, EXTRA_SIZE, UTF8_STRINGS } from "./layout.ts";
 
@@ -145,7 +145,10 @@ export class DeltaArena {
 
   /** Append one validated node row and its extra block with a single capacity check. */
   appendNode(kind: number, start: number, end: number, extraCount: number) {
-    this.reserve(this.rowCount + 1, this.extraUsed + extraCount);
+    // The value commonly follows a new string literal. Reserve both sections
+    // together instead of replacing the buffer on that first write.
+    const strings = this.stringsCapacity === 0 && kind === NodeKind.StringLiteral ? 1 : this.stringUsed;
+    this.reserve(this.rowCount + 1, this.extraUsed + extraCount, strings);
     const id = this.nodeCount;
     this.rowCount++; this.newNodeCount++;
     const offset = this.rowsOffset + (id - this.baseNodeCount) * ROW_SIZE;
