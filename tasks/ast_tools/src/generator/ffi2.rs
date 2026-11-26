@@ -205,6 +205,7 @@ export function nativeField(kind: number, field: number): FieldDescriptor | unde
     kinds.push_str("} as const);\n");
     declarations.push_str("};\n");
     metadata.push_str(&kinds);
+    writeln!(metadata, "export const NODE_KIND_COUNT = {count};").unwrap();
     writeln!(
         metadata,
         "export const nativeExtraCounts: readonly number[] = {extra_counts:?};"

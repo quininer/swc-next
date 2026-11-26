@@ -3,7 +3,7 @@ import type { DeltaArena } from "./storage.ts";
 import type { AstMeta, BufferInput, NodeList, FieldOffset, FieldDescriptor, AstNode, AstNodeInput, EnumValue, NodeDescriptor } from "./types.ts";
 export type * from "./native-types.d.ts";
 export type { Lang, SourceType } from "@swc-next/types";
-import { layouts, enums, nativeField, NodeKind } from "./schema.ts";
+import { layouts, enums, nativeField, NodeKind, NODE_KIND_COUNT } from "./schema.ts";
 import { NodeView, createNodeView, createNumericNodeView, NUMERIC_NODE_KIND } from "./node.ts";
 import { cloneNode as cloneNodeInto } from "./clone.ts";
 import { writeType, writeSpan, writeNativeField, finishEdits, writeStringAt, writeNodeAt, writeExtraNodeAt, writeBoolAt, writeNumberAt, writeEnumAt } from "./writer.ts";
@@ -262,7 +262,7 @@ export class AstView {
   /** Views already hold a validated logical ID; original slots read directly. */
   _kindAt(id: number): number {
     const kind = id < this.#nodeCount ? this._bytes[this._kinds + (id >>> 0)] : this._arena!.kind(id);
-    if (kind === undefined || kind >= layouts.length) { throw new RangeError("Unknown AST node kind"); }
+    if (kind === undefined || kind >= NODE_KIND_COUNT) { throw new RangeError("Unknown AST node kind"); }
     return kind;
   }
   /** Internal callers already validated the logical ID and resolved its row. */
@@ -317,7 +317,7 @@ export class AstView {
     return this.#wrapNodeView(id, kind);
   }
   #wrapNodeView(id: number, kind: number): NodeView {
-    if (kind >= layouts.length) { throw new RangeError("Unknown AST node kind"); }
+    if (kind >= NODE_KIND_COUNT) { throw new RangeError("Unknown AST node kind"); }
     this._createdNodeCount++;
     return kind === NUMERIC_NODE_KIND ? createNumericNodeView(this, id, kind) : new NodeView(this, id, kind);
   }
