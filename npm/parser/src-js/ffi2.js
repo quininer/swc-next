@@ -1,7 +1,7 @@
 import { encodeSource } from "@swc-next/protocol/source";
 import { encodeParserConfig } from "@swc-next/protocol/parser";
 import { readAst } from "@swc-next/ast2";
-export { readAst, AstView, NodeView, NodeKind, AstList } from "@swc-next/ast2";
+export { readAst, AstView, NodeView, NodeKind, Field, AstList } from "@swc-next/ast2";
 import { parseSync2 as __parseSync } from "./binding.js";
 export { langFromPath, sourceTypeFromPath } from "./binding.js";
 

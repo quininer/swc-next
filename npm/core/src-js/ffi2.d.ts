@@ -1,6 +1,6 @@
 export type * from "@swc-next/ast2";
 export * from "@swc-next/walker2";
-export { readAst, AstView, NodeView, NodeKind, AstList } from "@swc-next/ast2";
+export { readAst, AstView, NodeView, NodeKind, Field, AstList } from "@swc-next/ast2";
 import type { AstView, AstNode, Program } from "@swc-next/ast2";
 
 import type {

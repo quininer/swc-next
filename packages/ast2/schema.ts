@@ -839,6 +839,7 @@ for (let kind = 0; kind < layouts.length; kind++) {
   }
 }
 export function nativeField(kind: number, field: number): FieldDescriptor | undefined {
+  if (!Number.isInteger(field) || field <= 0 || field >= FIELD_COUNT) { return undefined; }
   return fieldDescriptors[nativeFieldTable[kind * FIELD_COUNT + field]];
 }
 export const NodeKind = Object.freeze({

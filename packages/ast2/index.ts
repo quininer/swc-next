@@ -1,6 +1,6 @@
 import type { Node, Program } from "./native-types.d.ts";
 import type { DeltaArena } from "./storage.ts";
-import type { AstMeta, BufferInput, NodeList, FieldOffset, FieldDescriptor, NodeField, AstNode, AstNodeInput, EnumValue, NodeDescriptor } from "./types.ts";
+import type { AstMeta, BufferInput, NodeList, FieldOffset, FieldDescriptor, AstNode, AstNodeInput, EnumValue, NodeDescriptor } from "./types.ts";
 export type * from "./native-types.d.ts";
 export type { Lang, SourceType } from "@swc-next/types";
 import { layouts, enums, nativeField, NodeKind } from "./schema.ts";
@@ -10,11 +10,12 @@ import { writeType, writeSpan, writeNativeField, finishEdits, writeStringAt, wri
 import { fieldLocation, isWellFormed, newNode } from "./storage.ts";
 import { AstList, isList, listAt } from "./list.ts";
 import type { ListEntry } from "./list.ts";
-import { fieldId, fieldNames, parserMeta } from "./protocol.ts";
+import { fieldNames, parserMeta, type FieldId } from "./protocol.ts";
 import { NONE, SPAN_SIZE, PAYLOAD_SIZE } from "./layout.ts";
 import { PositionCache } from "./position.ts";
 
 export { NodeKind } from "./schema.ts";
+export { Field, type FieldId } from "./protocol.ts";
 
 const EMPTY_POSITION_CACHE = new PositionCache(new DataView(new ArrayBuffer(8)), 0, 0);
 export { NodeView } from "./node.ts";
@@ -163,10 +164,10 @@ export class AstView {
     return arena === null || !arena.rowCount && !arena.extraUsed && !arena.stringUsed
       ? null : arena.borrow(this.rootId, this._editor?.flags ?? this._flags);
   }
-  spliceList(node: NodeView | number, key: string, start: number, deleteCount: number, ...values: (ListEntry | NodeDescriptor)[]) {
+  spliceList(node: NodeView | number, field: FieldId, start: number, deleteCount: number, ...values: (ListEntry | NodeDescriptor)[]) {
     if (node instanceof NodeView && node.ast !== this) { throw new TypeError("Node belongs to another AST buffer"); }
     const id = node instanceof NodeView ? node.nodeId : node;
-    const list = this.value(id, fieldId(key));
+    const list = this.value(id, field);
     if (!(list instanceof AstList)) { throw new TypeError("Expected an AST list"); }
     const removed = list.splice(start, deleteCount, ...values);
     return removed;
@@ -201,8 +202,8 @@ export class AstView {
   get materializedNodeCount() {
     return this._createdNodeCount;
   }
-  getField<K extends string>(id: number, key: K, kind?: number): NodeField<K> {
-    return this.value(id, fieldId(key), kind) as NodeField<K>;
+  getField(id: number, field: FieldId, kind?: number): unknown {
+    return this.value(id, field, kind);
   }
   writeNativeField(id: number, field: number, value: unknown) { writeNativeField(this, id, field, value); }
   _setType(id: number, value: string): void { writeType(this, id, value); }
@@ -347,19 +348,13 @@ export class AstView {
     if (child >= this.totalNodeCount) { throw new RangeError("AST child out of bounds"); }
     return child;
   }
-  ref(id: number, key: string, allowMissing = false): number {
-    return this._ref(id, fieldId(key), allowMissing);
-  }
-  _ref(id: number, slot: number, allowMissing = false): number {
+  ref(id: number, slot: number, allowMissing = false): number {
     const field = this.fieldOffset(id, slot);
     if (!field) { return NONE; }
     if (field.type !== "node") { throw new TypeError("Expected a node reference"); }
     return this.childAt(id, field.offset, field.optional || allowMissing, field.view);
   }
-  range(id: number, key: string): [number, number] {
-    return this._range(id, fieldId(key));
-  }
-  _range(id: number, slot: number): [number, number] {
+  range(id: number, slot: number): [number, number] {
     const field = this.fieldOffset(id, slot);
     if (!field || field.type !== "list")
       { throw new TypeError("Expected an AST list"); }
@@ -489,8 +484,8 @@ export class AstView {
     }
     return decodeUtf8OrWtf8(bytes.subarray(start, end));
   }
-  bytesForString(id: number, fieldName: string) {
-    const field = this.fieldOffset(id, fieldId(fieldName));
+  bytesForString(id: number, slot: FieldId) {
+    const field = this.fieldOffset(id, slot);
     if (!field || field.type !== "string")
       { throw new TypeError("Field is not a native AST string"); }
     const start = field.view.getUint32(field.offset, true),

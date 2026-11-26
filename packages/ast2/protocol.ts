@@ -127,11 +127,7 @@ export const Field = Object.freeze({
   update: 123,
   value: 124,
 } as const);
-const fields: Readonly<Record<string, number>> = Field;
-export function fieldId(name: string): number {
-  const id = fields[name];
-  return typeof id === 'number' ? id : 0;
-}
+export type FieldId = (typeof Field)[keyof typeof Field];
 export const fieldNames = ['', ...Object.keys(Field)];
 export const initialFields: readonly (readonly number[])[] = [
   [Field.hashbang], // Program

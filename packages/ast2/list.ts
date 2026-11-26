@@ -24,7 +24,7 @@ export class AstList<T = ListEntry> implements Iterable<T> {
   get key(): string { return fieldNames[this.field]; }
   refresh() {
     if (this.#version !== this.ast._listVersion) {
-      [this.#start, this.#end] = this.ast._range(this.owner, this.field);
+      [this.#start, this.#end] = this.ast.range(this.owner, this.field);
       this.#version = this.ast._listVersion;
     }
   }

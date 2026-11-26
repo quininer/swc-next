@@ -13,7 +13,7 @@ import {
   generateBuffersSync,
   walk,
 } from "../dist/ffi2.js";
-import { readAst, NodeKind, type NodeView, type AstNode, type AstNodeInput, type AstList } from "@swc-next/ast2";
+import { readAst, NodeKind, Field, type NodeView, type AstNode, type AstNodeInput, type AstList } from "@swc-next/ast2";
 
 const ast = parseSync("function f(value: string) { return value; }", {
   lang: "ts",
@@ -55,7 +55,7 @@ const statement = ast.new_node<ExpressionStatement>(NodeKind.ExpressionStatement
 statement.expression = identifier;
 // @ts-expect-error List mutations only accept buffer nodes.
 statement.ast.program.body.push({ type: "EmptyStatement", start: 0, end: 0 });
-const removed: (AstNode | null)[] = ast.spliceList(ast.program, "body", 0, 0, statement);
+const removed: (AstNode | null)[] = ast.spliceList(ast.program, Field.body, 0, 0, statement);
 const editBuffer: Uint8Array | null = ast.editBuffer;
 const count: number = ast.totalNodeCount;
 void [created, removed, editBuffer, count];

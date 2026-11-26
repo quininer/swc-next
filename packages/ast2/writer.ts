@@ -97,7 +97,9 @@ function createNode(ast: AstView, descriptor: NodeDescriptor): NodeView {
   for (const key in descriptor) {
     if (!Object.hasOwn(descriptor, key)) { continue; }
     if (key === "kind" || key === "start" || key === "end" || key === "type") { continue; }
-    node.set(key, descriptor[key]);
+    const field = Field[key as keyof typeof Field];
+    if (typeof field !== "number") { throw new TypeError("Field has no native storage"); }
+    ast.writeNativeField(node.nodeId, field, descriptor[key]);
   }
   return node;
 }
@@ -113,7 +115,7 @@ export function listIds(ast: AstView, values: ListInput): number[] {
 }
 
 export function storeReferences(ast: AstView, owner: number, field: number, ids: readonly number[]): void {
-  const [currentStart, currentEnd] = ast._range(owner, field);
+  const [currentStart, currentEnd] = ast.range(owner, field);
   if (ids.length === currentEnd - currentStart) {
     let unchanged = true;
     for (let index = 0; index < ids.length; index++) {
@@ -131,7 +133,7 @@ export function storeReferences(ast: AstView, owner: number, field: number, ids:
 
 /** Splice only changed slots. Set is O(1), push amortized O(1), and splice shifts its tail. */
 export function spliceReferences(ast: AstView, owner: number, field: number, begin: number, removed: number, ids: readonly number[]): void {
-  const [oldStart, oldEnd] = ast._range(owner, field), oldLength = oldEnd - oldStart;
+  const [oldStart, oldEnd] = ast.range(owner, field), oldLength = oldEnd - oldStart;
   if (begin < 0 || removed < 0 || begin + removed > oldLength) { throw new RangeError("AST list index out of bounds"); }
   const length = oldLength - removed + ids.length;
   const start = reserveList(ast, owner, field, oldStart, oldLength, length);

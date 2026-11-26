@@ -1,8 +1,10 @@
 import type { Lang, SourceType } from "@swc-next/types";
 import type { Node, Program } from "./native-types.d.ts";
 import type { NodeKind as NativeNodeKind } from "./node-kinds.d.ts";
+import type { FieldId } from "./dist/protocol.js";
 
 export declare const NodeKind: typeof NativeNodeKind;
+export { Field, type FieldId } from "./dist/protocol.js";
 
 export type * from "./native-types.d.ts";
 export type { Lang, SourceType } from "@swc-next/types";
@@ -77,10 +79,10 @@ export declare class NodeView<T extends Node = Node> {
   readonly type: T["type"];
   start: number;
   end: number;
-  /** Read a native field by name. */
-  get(field: string): unknown;
-  /** Write a native field in the current buffer. */
-  set(field: string, value: unknown): void;
+  /** Read a native field by ID. Returns `undefined` if the node has no such field. */
+  get(field: FieldId): unknown;
+  /** Write a native field by ID in the current buffer. */
+  set(field: FieldId, value: unknown): void;
   /** Materialize this node for JSON serialization. */
   toJSON(): unknown;
 }
@@ -128,7 +130,7 @@ export declare class AstView {
   /** Allocate a native node slot; fill required fields before checked Rust decoding. Spans use byte offsets. */
   new_node<T extends Node = Node>(kind: (typeof NodeKind)[keyof typeof NodeKind], start?: number, end?: number): AstNode<T>;
   /** Splice a public node list and publish its references before returning. */
-  spliceList(node: AstNode | number, key: string, start: number, deleteCount: number, ...values: (AstNode | NodeDescriptor | null | undefined)[]): (AstNode | null)[];
+  spliceList(node: AstNode | number, field: FieldId, start: number, deleteCount: number, ...values: (AstNode | NodeDescriptor | null | undefined)[]): (AstNode | null)[];
   /**
    * Expose the current storage; list edits are already committed.
    * Both views are valid until another edit; copy both buffers to retain a snapshot.
@@ -156,6 +158,8 @@ export declare class AstView {
   readonly diagnostics: readonly AstDiagnostic[];
   node(id: number): AstNode | null;
   kind(id: number): (typeof NodeKind)[keyof typeof NodeKind];
+  /** Read a child ID without creating a view. An absent child returns `0xffffffff`. */
+  ref(id: number, field: FieldId, allowMissing?: boolean): number;
   byteStart(id: number): number;
   byteEnd(id: number): number;
   /** Query the Rust-built non-ASCII source position index. */
@@ -167,7 +171,7 @@ export declare class AstView {
   /** Original source text for a node; rejects spans outside the source. */
   text(id: number): string;
   /** UTF-8/WTF-8 bytes for a native string field, sharing its base or delta buffer. */
-  bytesForString(id: number, field: string): Uint8Array | null;
+  bytesForString(id: number, field: FieldId): Uint8Array | null;
   /** Explicit copying boundary for consumers that need ordinary own properties. */
   materialize<T>(node: T): Materialized<T>;
   materialize(): Node;

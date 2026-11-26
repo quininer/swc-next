@@ -1,7 +1,7 @@
 import { encodeSource } from "@swc-next/protocol/source";
 import { encodeParserConfig } from "@swc-next/protocol/parser";
 import { readAst, NodeView } from "@swc-next/ast2";
-export { readAst, AstView, NodeView, NodeKind, AstList } from "@swc-next/ast2";
+export { readAst, AstView, NodeView, NodeKind, Field, AstList } from "@swc-next/ast2";
 import { encodeTransformApiOptions } from "@swc-next/protocol/transform";
 import { decodeJsOutput } from "@swc-next/protocol/output";
 import { encodeGeneratorConfig } from "@swc-next/protocol/generator";

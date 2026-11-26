@@ -1,5 +1,5 @@
-import type { Node, Program, VariableDeclaration, VariableDeclarator } from "@swc-next/ast2";
-import type { AstView, AstList, NodeView, NodeKind, AstNode, AstNodeInput, NodeDescriptor } from "@swc-next/ast2";
+import { Field } from "@swc-next/ast2";
+import type { AstView, AstList, NodeView, NodeKind, FieldId, Node, Program, VariableDeclaration, VariableDeclarator, AstNode, AstNodeInput, NodeDescriptor } from "@swc-next/ast2";
 import type { AstView as RuntimeView } from "../../../packages/ast2/index.ts";
 import type { AstList as RuntimeList } from "../../../packages/ast2/list.ts";
 import type { NodeView as RuntimeNode } from "../../../packages/ast2/node.ts";
@@ -13,6 +13,10 @@ export type ViewMembers = NoMissingMembers<Exclude<keyof AstView, keyof RuntimeV
 export type ListMembers = NoMissingMembers<Exclude<keyof AstList, keyof RuntimeList>>;
 export type NodeMembers = NoMissingMembers<Exclude<keyof NodeView, keyof RuntimeNode>>;
 export type Kinds = IsTrue<typeof NodeKind extends typeof RuntimeKind ? true : false>;
+export type FieldRead = IsTrue<FieldId extends Parameters<RuntimeNode["get"]>[0] ? true : false>;
+export type FieldWrite = IsTrue<FieldId extends Parameters<RuntimeNode["set"]>[0] ? true : false>;
+export type NoStringFieldRead = NoMissingMembers<Extract<Parameters<NodeView["get"]>[0], string>>;
+export type NoStringFieldWrite = NoMissingMembers<Extract<Parameters<NodeView["set"]>[0], string>>;
 export type EncodeOptions = IsTrue<Parameters<AstView["encode"]> extends Parameters<RuntimeView["encode"]> ? true : false>;
 export type ListSplice = IsTrue<Parameters<AstList<number>["splice"]> extends Parameters<RuntimeList<number>["splice"]> ? true : false>;
 
@@ -42,7 +46,7 @@ void cloned;
 // Descriptors are accepted by set() and by node/list inputs.
 declare const descriptor: NodeDescriptor;
 declare const declarator: AstNode<VariableDeclarator>;
-declarator.set("init", descriptor);
+declarator.set(Field.init, descriptor);
 const init: AstNodeInput<VariableDeclarator>["init"] = descriptor;
 void init;
 
@@ -54,5 +58,5 @@ list.push(descriptor);
 list.unshift(descriptor);
 list.replace([descriptor]);
 const first: AstNode<VariableDeclaration> | undefined = list.get(0);
-view.spliceList(declarator, "declarators", 0, 0, descriptor);
+view.spliceList(declarator, Field.declarators, 0, 0, descriptor);
 void first;

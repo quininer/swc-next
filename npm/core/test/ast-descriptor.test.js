@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseSync, generateSync, NodeKind } from "../dist/ffi2.js";
+import { parseSync, generateSync, NodeKind, Field } from "../dist/ffi2.js";
 
 function parse(source) {
   const ast = parseSync(source);
@@ -45,7 +45,7 @@ test("descriptors accept UTF-16 spans", () => {
 
 test("set accepts kind descriptors", () => {
   const { ast, declaration } = parse("let value;");
-  declaration.set("init", { kind: NodeKind.IdentifierReference, name: "bar" });
+  declaration.set(Field.init, { kind: NodeKind.IdentifierReference, name: "bar" });
   assert.equal(code(ast), "let value = bar;\n");
 });
 

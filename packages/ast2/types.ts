@@ -3,6 +3,7 @@ import type { Node } from "./native-types.d.ts";
 import type { NodeView } from "./node.ts";
 import type { AstView } from "./index.ts";
 import type { AstList, ListEntry } from "./list.ts";
+import type { FieldId } from "./protocol.ts";
 
 export interface AstMeta {
   readonly lang: Lang;
@@ -80,8 +81,8 @@ export type AstNodeInput<T extends Node> = { [K in keyof T]: T[K] | AstValue<T[K
 export interface NodeIdentity {
   readonly ast: AstView;
   readonly nodeId: number;
-  get(field: string): unknown;
-  set(field: string, value: unknown): void;
+  get(field: FieldId): unknown;
+  set(field: FieldId, value: unknown): void;
 }
 export type AstNode<T extends Node = Node> = T extends unknown ? AstNodeFields<T> & NodeIdentity : never;
 export type FieldInput<K extends string> = K extends UnionKeys<Node>

@@ -7,6 +7,7 @@ import {
   generateSync,
   generateBuffersSync,
   NodeKind,
+  Field,
   readAst,
   walk,
   visitorKeys,
@@ -55,7 +56,7 @@ test("AST buffers own the source and lazily create node views", () => {
   identifier.name = "value";
   assert.equal(identifier.name, "value");
   assert.equal(
-    ast.bytesForString(identifier.nodeId, "name").buffer,
+    ast.bytesForString(identifier.nodeId, Field.name).buffer,
     ast.editBuffer.buffer,
   );
   assert.equal(ast.source, 'const value = "你好";');
@@ -71,9 +72,23 @@ test("child fields read stored IDs without indexing parents", () => {
   const initialized = parseSync("const value = input;");
   const declaration = initialized.program.body.get(0).declarators.get(0);
   const before = initialized.materializedNodeCount;
-  const init = initialized.ref(declaration.nodeId, "init");
+  const init = initialized.ref(declaration.nodeId, Field.init);
   assert.equal(initialized.materializedNodeCount, before);
   assert.equal(init, declaration.init.nodeId);
+});
+
+test("numeric field access stays within the node's layout", () => {
+  const ast = parseSync("value;");
+  const node = ast.program.body.get(0).expression;
+  assert.equal(node.get(Field.name), "value");
+  assert.equal(node.get(Field.body), undefined);
+  assert.equal(node.get("name"), undefined);
+
+  // Without a field bound check this would read the next kind's name slot.
+  const overflow = Object.keys(Field).length + 1 + Field.name;
+  assert.equal(node.get(overflow), undefined);
+  assert.throws(() => node.set(overflow, "ignored"), TypeError);
+  assert.equal(node.name, "value");
 });
 
 test("comment arrays preserve values and canonical offsets", () => {
@@ -263,7 +278,7 @@ test("TS method signatures keep their native parent", () => {
   const method = methodAst.program.body.get(0).body.body.get(0);
   assert.equal(method.type, "TsMethodDefinition");
   assert.equal(method.value.type, "TsFunction");
-  assert.equal(method.value.get("isMethod"), undefined);
+  assert.equal("isMethod" in method.value, false);
   assert.ok(methodAst.cloneNode(method).value.isSame(method.value));
 });
 
@@ -325,8 +340,6 @@ test("native field availability does not depend on the source language", () => {
   assert.equal(binding.optional, undefined);
   assert.equal(binding.typeAnnotation, undefined);
   assert.equal(declaration.typeAnnotation, null);
-  assert.equal(ast.getField(binding.nodeId, "constructor"), undefined);
-  assert.equal(ast.getField(binding.nodeId, "__proto__"), undefined);
   assert.equal(binding.decorators, undefined);
 
   const typed = expectRoundTrip("function f(value: string) {}", typescript);
@@ -461,7 +474,7 @@ test("invalid buffers are rejected before allocation or during bounded access", 
   listArrays.view.setUint32(listArrays.extra + (extraCount - 1) * 4, 0, true);
   const listAst = readAst(listBytes);
   assert.throws(() => listAst.program.body.length, RangeError);
-  assert.throws(() => listAst.program.get("body").length, RangeError);
+  assert.throws(() => listAst.program.get(Field.body).length, RangeError);
   assert.throws(() => generateBuffersSync(listAst.buffer));
 
   const templateAst = parseSync("`x`");
@@ -470,8 +483,8 @@ test("invalid buffers are rejected before allocation or during bounded access", 
   const templateExtraCount = templateArrays.view.getUint32(templateArrays.extra - 4, true);
   templateArrays.view.setUint32(templateArrays.payloads + template.nodeId * 16 + 12, templateExtraCount - 1, true);
   templateArrays.view.setUint32(templateArrays.extra + (templateExtraCount - 1) * 4, 0, true);
-  assert.throws(() => template.get("raw"), RangeError);
-  assert.throws(() => templateAst.bytesForString(template.nodeId, "raw"), RangeError);
+  assert.throws(() => template.get(Field.raw), RangeError);
+  assert.throws(() => templateAst.bytesForString(template.nodeId, Field.raw), RangeError);
 });
 
 test("deep AST access and materialization do not recurse through the whole tree", () => {

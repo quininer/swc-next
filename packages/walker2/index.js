@@ -15,7 +15,7 @@
 import { NodeView } from "@swc-next/ast2";
 import { visitorKeys } from "./visitor-keys.js";
 import { childVisitors } from "./child-visitors.js";
-import { NONE, fieldId, fieldNames, layouts, nativeField } from "@swc-next/ast2/internal";
+import { NONE, fieldNames, layouts, nativeField } from "@swc-next/ast2/internal";
 import { compile, assertNode, assertSync, SKIP, REMOVED, REPLACED } from "./hook-compiler.js";
 
 export { visitorKeys, NONE };
@@ -26,9 +26,15 @@ function childDescriptor(kind, field) {
   return [desc[0] ? layouts[kind].extra : -1, desc[1], desc[3], desc[2] === "list"];
 }
 
-const plans = layouts.map(({ name }, kind) => {
-  const fields = visitorKeys[name].map(fieldId);
-  const children = fields.map(field => childDescriptor(kind, field));
+const plans = layouts.map((layout, kind) => {
+  const fields = [];
+  const children = [];
+  for (const [field] of layout.fields) {
+    const descriptor = childDescriptor(kind, field);
+    if (descriptor === null) { continue; }
+    fields.push(field);
+    children.push(descriptor);
+  }
   return { fields, children };
 });
 
@@ -305,7 +311,7 @@ class WalkContext {
       frame.id = frame.list.nodeId(frame.index);
     } else {
       ast.writeNativeField(frame.parentId, frame.field, node);
-      frame.id = ast._ref(frame.parentId, frame.field);
+      frame.id = ast.ref(frame.parentId, frame.field);
     }
     this.#node = null;
     frame.flags |= REPLACED;

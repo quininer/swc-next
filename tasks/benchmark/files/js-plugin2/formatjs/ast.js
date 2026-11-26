@@ -1,7 +1,7 @@
 // NodeView node construction for the AST views.
 // Every `original` argument is a NodeView from the same AstView, so there is
 // no representation branch here.
-import { NodeKind } from '@swc-next/core/ffi2';
+import { Field, NodeKind } from '@swc-next/core/ffi2';
 
 function allocate(kind, original) {
   const ast = original.ast;
@@ -27,14 +27,14 @@ export function property(name, value, original, stringKey = false) {
   const key = stringKey ? literal(name, original) : allocate(NodeKind.IdentifierName, original);
   if (!stringKey) { key.name = name; }
   const node = allocate(NodeKind.ObjectProperty, original);
-  node.set('key', key);
-  node.set('value', value);
+  node.set(Field.key, key);
+  node.set(Field.value, value);
   return node;
 }
 
 export function expressionContainer(value, original) {
   const node = allocate(NodeKind.JsxExpressionContainer, original);
-  node.set('expression', value);
+  node.set(Field.expression, value);
   return node;
 }
 
@@ -42,14 +42,14 @@ export function jsxAttribute(name, value, original) {
   const key = allocate(NodeKind.JsxIdentifier, original);
   key.name = name;
   const node = allocate(NodeKind.JsxAttribute, original);
-  node.set('name', key);
-  node.set('value', jsxValue(value));
+  node.set(Field.name, key);
+  node.set(Field.value, jsxValue(value));
   return node;
 }
 
 export function jsxValue(value) {
   if (value.type === 'StringLiteral') {
-    if (value.raw.slice(1, -1) !== value.value) { value.set('raw', ''); }
+    if (value.raw.slice(1, -1) !== value.value) { value.set(Field.raw, ''); }
   }
   return value;
 }

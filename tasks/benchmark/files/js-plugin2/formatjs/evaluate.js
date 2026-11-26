@@ -1,6 +1,7 @@
 // Static evaluation ported and modified from swc-project/plugins (Apache-2.0).
 // AST views: numeric node IDs key the scopes; no NodeView is created
 // just to look a binding up.
+import { Field } from '@swc-next/core/ffi2';
 import { createWalker, NONE } from '@swc-next/walker2';
 import { UNKNOWN, unwrap, functions } from '../common/formatjs/evaluate-common.js';
 import { EvaluatorBase } from '../common/formatjs/evaluator-base.js';
@@ -85,7 +86,7 @@ const scopeWalker = createWalker({
       const pattern = node.id;
       declarePattern(pattern, target);
       if (pattern.type === 'BindingIdentifier') {
-        const init = kind === 'Var' ? NONE : ctx.ast.ref(ctx.nodeId, 'init');
+        const init = kind === 'Var' ? NONE : ctx.ast.ref(ctx.nodeId, Field.init);
         state.declarations.push({ binding: target.bindings.get(pattern.name), init: init === NONE ? null : init });
       }
     }

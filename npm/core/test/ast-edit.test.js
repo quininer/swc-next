@@ -6,6 +6,7 @@ import {
   readAst,
   AstList,
   NodeKind,
+  Field,
   generateSync,
   generateBuffersSync,
   walk,
@@ -38,7 +39,7 @@ function literal(ast, value) {
 }
 function expression(value) {
   const node = value.ast.new_node(NodeKind.ExpressionStatement);
-  node.set("expression", value);
+  node.set(Field.expression, value);
   return node;
 }
 
@@ -70,7 +71,7 @@ test("native string fields write and read the same storage", () => {
   const directive = directiveAst.program.directives.get(0);
   directive.value = "use asm";
   assert.equal(directive.value, "use asm");
-  assert.equal(directive.get("value"), "use asm");
+  assert.equal(directive.get(Field.value), "use asm");
   assert.equal(directiveAst.materialize().directives[0].value, "use asm");
 
   const textAst = parseSync("<div>hello</div>;", jsx);
@@ -108,7 +109,7 @@ test("native spans and parameter lists retain their owning nodes", () => {
   const end = parameter.end - 1;
   parameter.end = end;
   assert.equal(parameter.end, end);
-  assert.equal(fn.get("params").get("items").get(0).end, end);
+  assert.equal(fn.get(Field.params).get(Field.items).get(0).end, end);
 
   const annotationAst = parseSync("let value: string;", typescript);
   const declaration = annotationAst.program.body.get(0).declarators.get(0);
@@ -156,7 +157,7 @@ test("list growth reuses capacity and updates live references", () => {
 test("splicing an elision returns its null entry", () => {
   const ast = parseSync("[,];");
   const array = ast.program.body.get(0).expression;
-  const removed = ast.spliceList(array, "elements", 0, 1);
+  const removed = ast.spliceList(array, Field.elements, 0, 1);
   assert.deepEqual(removed, [null]);
   expectCode(generateBuffersSync(...ast.encode()).code, "[];");
 });
@@ -382,16 +383,16 @@ test("new native slots use ordinary field setters", () => {
 test("native construction preserves parameter containers and live native ranges", () => {
   const ast = parseSync("");
   const fn = ast.new_node(NodeKind.Function);
-  fn.set("functionType", "FunctionDeclaration");
-  fn.set("id", identifier(ast, "created", NodeKind.BindingIdentifier));
-  fn.set("body", ast.new_node(NodeKind.FunctionBody));
+  fn.set(Field.functionType, "FunctionDeclaration");
+  fn.set(Field.id, identifier(ast, "created", NodeKind.BindingIdentifier));
+  fn.set(Field.body, ast.new_node(NodeKind.FunctionBody));
   const parameter = ast.new_node(NodeKind.FormalParameter);
   parameter.pattern = identifier(ast, "value", NodeKind.BindingIdentifier);
   fn.params = ast.new_node(NodeKind.FormalParameters);
   fn.params.items.push(parameter);
   ast.program.body.push(fn);
   assert.equal(fn.params.items.length, 1);
-  assert.equal(fn.get("params").get("kind"), "FormalParameters");
+  assert.equal(fn.get(Field.params).get(Field.kind), "FormalParameters");
   expectCode(generateBuffersSync(ast.buffer, ast.editBuffer).code, "function created(value) {}");
 
   const typed = parseSync("function f(value: string) {}", typescript);
@@ -401,7 +402,7 @@ test("native construction preserves parameter containers and live native ranges"
   expectCode(generateBuffersSync(typed.buffer, typed.editBuffer ?? new Uint8Array()).code, "function f(value: string) {}", typescript);
 
   const array = ast.new_node(NodeKind.ArrayExpression);
-  const native = array.get("elements");
+  const native = array.get(Field.elements);
   native.push(literal(ast, 1));
   native.replace([literal(ast, 2)]);
   assert.equal(array.elements.get(0).value, 2);
@@ -487,7 +488,7 @@ test("template raw uses native storage in JavaScript and TypeScript", () => {
     const quasi = parseSync(source, options).program.body.get(0).declarators.get(0).init.quasis.get(0);
     assert.equal(quasi.raw, "a\nb\nc");
     quasi.raw = "new";
-    assert.equal(quasi.get("raw"), "new");
+    assert.equal(quasi.get(Field.raw), "new");
   }
 });
 
@@ -508,9 +509,9 @@ test("TypeScript parameter wrappers and annotations survive incremental edits", 
       const name = identifier(ast, "next", NodeKind.BindingIdentifier);
       const keyword = ast.new_node(NodeKind.TsBooleanKeyword);
       const annotation = ast.new_node(NodeKind.TsTypeAnnotation);
-      annotation.set("typeAnnotation", keyword);
+      annotation.set(Field.typeAnnotation, keyword);
       const item = ast.new_node(NodeKind.FormalParameter);
-      item.set("pattern", name);
+      item.set(Field.pattern, name);
       item.typeAnnotation = annotation;
       program.body.get(0).params.items.push(item);
     },
@@ -667,7 +668,7 @@ test("checked buffers reject repeated native child references", () => {
   const buffer = parseBufferSync("[one(), two()];");
   const original = readAst(buffer);
   const array = original.program.body.get(0).expression;
-  const [start] = original.range(array.nodeId, "elements");
+  const [start] = original.range(array.nodeId, Field.elements);
   const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
   const extra = arrayLayout(buffer).extra;
   view.setUint32(extra + (start + 1) * 4, view.getUint32(extra + start * 4, true), true);
@@ -692,8 +693,8 @@ test("Rust checks native field constraints after kind changes", () => {
   argument.value = 1;
   assert.equal(argument.nodeId, argumentId);
   assert.equal(callAst.kind(argumentId), NodeKind.NumericLiteral);
-  assert.equal(argument.get("value"), 1);
-  argument.set("value", 2);
+  assert.equal(argument.get(Field.value), 1);
+  argument.set(Field.value, 2);
   assert.equal(argument.value, 2);
   expectCode(generateBuffersSync(...callAst.encode()).code, "call(2);");
 
@@ -709,12 +710,12 @@ test("Rust checks native field constraints after kind changes", () => {
   const detached = moduleAst.new_node(NodeKind.BindingIdentifier);
   detached.type = "StringLiteral";
   assert.equal(detached.type, "StringLiteral");
-  assert.equal(detached.get("name"), undefined);
-  assert.throws(() => detached.set("name", "ignored"), TypeError);
+  assert.equal(detached.get(Field.name), undefined);
+  assert.throws(() => detached.set(Field.name, "ignored"), TypeError);
   detached.value = "detached";
   assert.equal(moduleAst.kind(detached.nodeId), NodeKind.StringLiteral);
-  detached.set("raw", "'detached'");
-  assert.equal(detached.get("value"), "detached");
+  detached.set(Field.raw, "'detached'");
+  assert.equal(detached.get(Field.value), "detached");
   assert.equal(detached.raw, "'detached'");
 });
 

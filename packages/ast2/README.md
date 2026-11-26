@@ -6,10 +6,10 @@ dependency. Views use Rust node and enum names, camel-cased field names,
 and `AstList` for native ranges. They do not project to ESTree.
 
 ```js
-import { generateSync, parseSync, NodeKind } from '@swc-next/core/ffi2';
+import { generateSync, parseSync, Field, NodeKind } from '@swc-next/core/ffi2';
 
 const ast = parseSync('const greeting = "你好";');
-ast.program.body.get(0).declarators.get(0).id.name = 'renamed';
+ast.program.body.get(0).declarators.get(0).id.set(Field.name, 'renamed');
 
 const value = ast.new_node(NodeKind.NumericLiteral);
 value.value = 42;
@@ -27,7 +27,8 @@ write existing fields directly.
 
 `new_node(kind, start, end)` allocates a native node; spans are byte offsets.
 Fill required fields before passing the buffers to Rust decoding. Fields can
-be accessed as properties or by name with `get` and `set`. A function's
+be accessed as properties or by numeric `Field` ID with `get` and `set`.
+Use the exported constants rather than storing raw IDs across schema versions. A function's
 ordinary parameters are in `params.items`, and its rest parameter is in
 `params.rest`. File metadata is on `ast.meta`, not on the program node.
 References from another AST are cloned into this AST;

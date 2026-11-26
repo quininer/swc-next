@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { NodeKind, parseSync, generateBuffersSync } from "../dist/ffi2.js";
+import { NodeKind, Field, parseSync, generateBuffersSync } from "../dist/ffi2.js";
 import { createWalker, walk, NONE } from "@swc-next/walker2";
 
 test("walker exposes numeric metadata alongside node views", () => {
@@ -84,10 +84,10 @@ test("traversal resolves remaining fields after a kind change", () => {
       changed = true;
       const parent = ctx.parent;
       parent.type = "TsInstantiationExpression";
-      parent.set("expression", ctx.node);
+      parent.set(Field.expression, ctx.node);
       const argumentsNode = ast.new_node(NodeKind.TsTypeParameterInstantiation);
       argumentsNode.params.push(ast.new_node(NodeKind.TsStringKeyword));
-      parent.set("typeArguments", argumentsNode);
+      parent.set(Field.typeArguments, argumentsNode);
     },
   });
   assert.deepEqual(types, [
