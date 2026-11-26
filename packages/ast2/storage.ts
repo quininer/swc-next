@@ -199,6 +199,21 @@ export class DeltaArena {
     if (length === 0) { return; }
     const used = this.stringUsed;
     u32(this.baseStringLength + used + length, "String pool");
+    const units = value.length;
+    if (units <= 64 && used + units <= this.stringsCapacity) {
+      const bytes = this.bytes!, offset = this.stringsOffset + used;
+      let index = 0;
+      for (; index < units; index++) {
+        const code = value.charCodeAt(index);
+        if (code > 0x7f) { break; }
+        bytes[offset + index] = code;
+      }
+      if (index === units) {
+        this.stringUsed = used + units;
+        return;
+      }
+      // Nothing is published yet. The UTF-8/WTF-8 path rewrites the prefix.
+    }
     this.reserve(this.rowCount, this.extraUsed, used + length);
     const offset = this.stringsOffset + used;
     const written = isWellFormed(value)
