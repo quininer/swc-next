@@ -265,7 +265,7 @@ export class AstView {
   /** Internal callers already validated the logical ID and resolved its row. */
   _payloadAt(id: number, row: number): number {
     if (row !== -1) { return row + 16; }
-    return this._payloads + id * PAYLOAD_SIZE;
+    return this._payloads + (id >>> 0) * PAYLOAD_SIZE;
   }
   _typeAt(id: number, kind = this._kindAt(id)): string {
     return layouts[kind].name;
