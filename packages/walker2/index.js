@@ -102,42 +102,8 @@ class NumericListCursor {
     this.field = field;
     this.kind = kind;
     this.descriptor = descriptor;
-    this.#readRange();
   }
 
-  #readRange() {
-    const { ast, owner, descriptor } = this;
-    const row = ast.row(owner);
-    const payload = ast._payloadAt(owner, row);
-    let view = row === -1 ? ast._view : ast._arena.view;
-    let offset = payload + descriptor[1];
-    if (descriptor[0] !== -1) {
-      const start = view.getUint32(payload + descriptor[0], true);
-      const index = start + descriptor[1];
-      const limit = start < ast._extraCount ? ast._extraCount : ast.extraDataCount;
-      if (index + 2 > limit) { throw new RangeError("AST extra-data reference out of bounds"); }
-      view = index < ast._extraCount ? ast._view : ast._arena.view;
-      offset = index < ast._extraCount ? ast._extra + index * 4 : ast._arena.extraAddress(index);
-    }
-    const start = view.getUint32(offset, true), end = view.getUint32(offset + 4, true);
-    if (start > end || end > ast.extraDataCount) { throw new RangeError("AST list out of bounds"); }
-    this.start = start;
-    this.end = end;
-    this.version = ast._listVersion;
-  }
-
-  sync() {
-    const ast = this.ast;
-    if (this.version === ast._listVersion) { return; }
-    const kind = ast._kindAt(this.owner);
-    if (kind !== this.kind) {
-      const descriptor = childDescriptor(kind, this.field);
-      if (!descriptor?.[3]) { throw new Error("The current node's container was changed outside the walk context"); }
-      this.kind = kind;
-      this.descriptor = descriptor;
-    }
-    this.#readRange();
-  }
   get length() { return this.end - this.start; }
   nodeId(index) { return this.ast.extraChild(this.owner, this.start + index, true); }
   clear() { this.ast = null; this.descriptor = null; }
@@ -445,21 +411,58 @@ class WalkContext {
     return child !== NONE && this.visitScalarId(child, id, field);
   }
 
+  #readListRange(owner, descriptor, cursor) {
+    const ast = this.#ast;
+    const row = ast.row(owner);
+    const payload = ast._payloadAt(owner, row);
+    let view = row === -1 ? ast._view : ast._arena.view;
+    let offset = payload + descriptor[1];
+    if (descriptor[0] !== -1) {
+      const start = view.getUint32(payload + descriptor[0], true);
+      const index = start + descriptor[1];
+      const limit = start < ast._extraCount ? ast._extraCount : ast.extraDataCount;
+      if (index + 2 > limit) { throw new RangeError("AST extra-data reference out of bounds"); }
+      view = index < ast._extraCount ? ast._view : ast._arena.view;
+      offset = index < ast._extraCount ? ast._extra + index * 4 : ast._arena.extraAddress(index);
+    }
+    const start = view.getUint32(offset, true), end = view.getUint32(offset + 4, true);
+    if (start > end || end > ast.extraDataCount) { throw new RangeError("AST list out of bounds"); }
+    if (cursor === null) {
+      if (start === end) { return null; }
+      cursor = this.#listCursors[this.#depth];
+      if (cursor === undefined) {
+        cursor = this.#listCursors[this.#depth] = new NumericListCursor();
+      }
+    }
+    cursor.start = start;
+    cursor.end = end;
+    cursor.version = ast._listVersion;
+    return cursor;
+  }
+
+  #syncList(cursor) {
+    const kind = this.#ast._kindAt(cursor.owner);
+    if (kind !== cursor.kind) {
+      const descriptor = childDescriptor(kind, cursor.field);
+      if (!descriptor?.[3]) { throw new Error("The current node's container was changed outside the walk context"); }
+      cursor.kind = kind;
+      cursor.descriptor = descriptor;
+    }
+    this.#readListRange(cursor.owner, cursor.descriptor, cursor);
+  }
+
   #visitList(id, field, descriptor) {
     const ast = this.#ast;
-    let cursor = this.#listCursors[this.#depth];
-    if (cursor === undefined) {
-      cursor = this.#listCursors[this.#depth] = new NumericListCursor();
-    }
+    const cursor = this.#readListRange(id, descriptor, null);
+    if (cursor === null) { return false; }
     cursor.reset(ast, id, field, ast._kindAt(id), descriptor);
-    if (cursor.length === 0) { cursor.clear(); return false; }
     this.#ancestors[this.#depth++] = id;
     try {
       for (let index = 0; index < cursor.length; index++) {
         const child = cursor.nodeId(index);
         if (child !== NONE) { index = this.#visit(child, id, field, cursor, index); }
         if (this.stopped) { return true; }
-        cursor.sync();
+        if (cursor.version !== ast._listVersion) { this.#syncList(cursor); }
       }
       return false;
     } finally {
