@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseSync, generateSync } from "@swc-next/core/ffi2";
+import { NodeKind, parseSync, generateSync } from "@swc-next/core/ffi2";
 import { generateSync as generateStandalone } from "@swc-next/generator/ffi2";
 
 test("generateSync prints modified native views", () => {
@@ -15,7 +15,7 @@ test("AST preserves modified module attribute types", () => {
   for (const lang of ["ts", "dts"]) {
     const { program } = parseSync("declare module '*.txt' with { type: 'text' } {}", { lang });
     const module = program.body.get(0);
-    assert.equal(module.attributes.type, "TsTypeLiteral");
+    assert.equal(module.attributes.typeId, NodeKind.TsTypeLiteral);
     const value = module.attributes.members.get(0).typeAnnotation.typeAnnotation.literal;
     assert.equal(value.value, "text");
     value.value = "文本";
@@ -24,7 +24,7 @@ test("AST preserves modified module attribute types", () => {
     const roundtrip = parseSync(generated, { lang }).program.body.get(0);
     assert.equal(roundtrip.attributes.members.get(0).typeAnnotation.typeAnnotation.literal.value, "文本");
     assert.equal(roundtrip.id.value, "*.txt");
-    assert.equal(roundtrip.body.type, "TsModuleBlock");
+    assert.equal(roundtrip.body.typeId, NodeKind.TsModuleBlock);
     assert.equal(roundtrip.declare, true);
     assert.equal(roundtrip.kind, "Module");
   }

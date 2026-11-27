@@ -1,4 +1,4 @@
-import type { AstList, AstNode, AstView, NodeDescriptor, NodeView } from "@swc-next/ast2";
+import type { AstList, AstNode, AstView, NodeDescriptor, NodeKindId, NodeView } from "@swc-next/ast2";
 import type { NodeType } from "./visitor-keys.js";
 
 export { visitorKeys } from "./visitor-keys.js";
@@ -21,7 +21,7 @@ export interface WalkContext<State = unknown, Node extends AstNode = AstNode> {
   readonly ast: AstView;
   /** Live native type and kind; neither getter creates a view. */
   readonly type: NodeType;
-  readonly kind: number;
+  readonly kind: NodeKindId;
   /** Current node, materialized on first access and updated by `replace`. */
   readonly node: Node;
   /** Parent node, or `null` at the root. */

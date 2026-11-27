@@ -3,10 +3,10 @@ import type { DeltaArena } from "./storage.ts";
 import type { AstMeta, BufferInput, NodeList, FieldOffset, FieldDescriptor, AstNode, AstNodeInput, EnumValue, NodeDescriptor } from "./types.ts";
 export type * from "./native-types.d.ts";
 export type { Lang, SourceType } from "@swc-next/types";
-import { layouts, enums, nativeField, NodeKind, NODE_KIND_COUNT } from "./schema.ts";
+import { layouts, enums, nativeField, NodeKind, NODE_KIND_COUNT, type NodeKindId } from "./schema.ts";
 import { NodeView, createNodeView, createNumericNodeView, NUMERIC_NODE_KIND } from "./node.ts";
 import { cloneNode as cloneNodeInto } from "./clone.ts";
-import { writeType, writeSpan, writeNativeField, finishEdits, writeStringAt, writeNodeAt, writeExtraNodeAt, writeBoolAt, writeNumberAt, writeEnumAt } from "./writer.ts";
+import { writeSpan, writeNativeField, finishEdits, writeStringAt, writeNodeAt, writeExtraNodeAt, writeBoolAt, writeNumberAt, writeEnumAt } from "./writer.ts";
 import { fieldLocation, isWellFormed, newNode } from "./storage.ts";
 import { AstList, isList, listAt } from "./list.ts";
 import type { ListEntry } from "./list.ts";
@@ -17,7 +17,7 @@ import { PositionCache } from "./position.ts";
 // Keep the fixed wire stride local to the hot payload addressing code.
 const PAYLOAD_SIZE = 16;
 
-export { NodeKind } from "./schema.ts";
+export { NodeKind, type NodeKindId } from "./schema.ts";
 export { Field, type FieldId } from "./protocol.ts";
 
 const EMPTY_POSITION_CACHE = new PositionCache(new DataView(new ArrayBuffer(8)), 0, 0);
@@ -163,7 +163,7 @@ export class AstView {
   new_node<T extends Node = Node>(kind: number, start = 0, end = start): AstNode<T> {
     const id = newNode(this, kind, start, end);
     this._createdNodeCount++;
-    return createNodeView(this, id, kind) as unknown as AstNode<T>;
+    return createNodeView(this, id, kind as NodeKindId) as unknown as AstNode<T>;
   }
   get editBuffer() {
     const arena = this._arena;
@@ -212,7 +212,6 @@ export class AstView {
     return this.value(id, field, kind);
   }
   writeNativeField(id: number, field: number, value: unknown) { writeNativeField(this, id, field, value); }
-  _setType(id: number, value: string): void { writeType(this, id, value); }
   _setSpan(id: number, isStart: boolean, value: number): void { writeSpan(this, id, isStart, value); }
   /** Internal fast paths for generated field setters with constant offsets. */
   _writeStringAt(id: number, offset: number, optional: boolean, value: unknown): void {
@@ -261,22 +260,22 @@ export class AstView {
     if (id < this.nodeCount || this._arena?.has(id)) { return; }
     throw new RangeError("Invalid AST node ID");
   }
-  kind(id: number): number {
+  kind(id: number): NodeKindId {
     this.validateId(id);
     return this._kindAt(id);
   }
   /** Views already hold a validated logical ID; original slots read directly. */
-  _kindAt(id: number): number {
+  _kindAt(id: number): NodeKindId {
     const kind = id < this.#nodeCount ? this._bytes[this._kinds + (id >>> 0)] : this._arena!.kind(id);
     if (kind === undefined || kind >= NODE_KIND_COUNT) { throw new RangeError("Unknown AST node kind"); }
-    return kind;
+    return kind as NodeKindId;
   }
   /** Internal callers already validated the logical ID and resolved its row. */
   _payloadAt(id: number, row: number): number {
     if (row !== -1) { return row + 16; }
     return this._payloads + (id >>> 0) * PAYLOAD_SIZE;
   }
-  _typeAt(id: number, kind = this._kindAt(id)): string {
+  _typeAt(id: number, kind: number = this._kindAt(id)): string {
     return layouts[kind].name;
   }
   byteStart(id: number): number {
@@ -325,7 +324,7 @@ export class AstView {
   #wrapNodeView(id: number, kind: number): NodeView {
     if (kind >= NODE_KIND_COUNT) { throw new RangeError("Unknown AST node kind"); }
     this._createdNodeCount++;
-    return kind === NUMERIC_NODE_KIND ? createNumericNodeView(this, id, kind) : new NodeView(this, id, kind);
+    return kind === NUMERIC_NODE_KIND ? createNumericNodeView(this, id, kind) : new NodeView(this, id, kind as NodeKindId);
   }
   extraOffset(payload: number, pointer: number, slot: number, words = 1): number {
     const index = this._view.getUint32(payload + pointer, true) + slot;
@@ -343,7 +342,7 @@ export class AstView {
     if (value >= values.length) { throw new RangeError("Unknown AST enum value"); }
     return values[value];
   }
-  fieldOffset(id: number, field: number, kind = this.kind(id)): FieldOffset | null {
+  fieldOffset(id: number, field: number, kind: number = this.kind(id)): FieldOffset | null {
     const row = this.row(id);
     if (row !== -1) { kind = this._arena!.kind(id); }
     const descriptor = nativeField(kind, field);
@@ -399,7 +398,7 @@ export class AstView {
   }
   list(owner: number, field: number): NodeList { return new AstList(this, owner, field); }
 
-  value(id: number, field: number, kind = this.kind(id)): unknown {
+  value(id: number, field: number, kind: number = this.kind(id)): unknown {
     const row = this.row(id);
     if (row !== -1) { kind = this._arena!.kind(id); }
     const descriptor = nativeField(kind, field);

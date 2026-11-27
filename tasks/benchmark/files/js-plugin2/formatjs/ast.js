@@ -48,7 +48,7 @@ export function jsxAttribute(name, value, original) {
 }
 
 export function jsxValue(value) {
-  if (value.type === 'StringLiteral') {
+  if (value.typeId === NodeKind.StringLiteral) {
     if (value.raw.slice(1, -1) !== value.value) { value.set(Field.raw, ''); }
   }
   return value;

@@ -4,6 +4,7 @@ import type { NodeView } from "./node.ts";
 import type { AstView } from "./index.ts";
 import type { AstList, ListEntry } from "./list.ts";
 import type { FieldId } from "./protocol.ts";
+import type { NodeKindId } from "./schema.ts";
 
 export interface AstMeta {
   readonly lang: Lang;
@@ -73,7 +74,12 @@ export interface NodeDescriptor {
 
 export type AstValue<T> = T extends readonly (infer Element)[] ? AstList<AstValue<Element>>
   : T extends Node ? AstNode<T> : T;
-export type AstNodeFields<T extends Node> = { [K in keyof T]: AstValue<T[K]> };
+export type AstNodeFields<T extends Node> = {
+  get type(): T["type"];
+  set type(value: string | NodeKindId);
+  get typeId(): NodeKindId<T["type"]>;
+  set typeId(value: NodeKindId);
+} & { [K in keyof T as Exclude<K, "type">]: AstValue<T[K]> };
 type NodeInputValue<T> = Extract<AstValue<T>, NodeIdentity> extends never
   ? AstValue<T> extends AstList<infer Element> ? readonly (Element | NodeDescriptor)[] : never
   : NodeDescriptor;

@@ -1,9 +1,10 @@
 import type { Lang, SourceType } from "@swc-next/types";
 import type { Node, Program } from "./native-types.d.ts";
-import type { NodeKind as NativeNodeKind } from "./node-kinds.d.ts";
+import type { NodeKind as NativeNodeKind, NodeKindId } from "./node-kinds.d.ts";
 import type { FieldId } from "./dist/protocol.js";
 
 export declare const NodeKind: typeof NativeNodeKind;
+export type { NodeKindId } from "./node-kinds.d.ts";
 export { Field, type FieldId } from "./dist/protocol.js";
 
 export type * from "./native-types.d.ts";
@@ -28,7 +29,9 @@ export interface NodeDescriptor {
 type NodeInputValue<T> = Extract<AstValue<T>, NodeView> extends never
   ? AstValue<T> extends AstList<infer Element> ? readonly (Element | NodeDescriptor)[] : never
   : NodeDescriptor;
-export type AstNode<T extends Node = Node> = T extends unknown ? { [K in keyof T]: AstValue<T[K]> } & NodeView<T> : never;
+export type AstNode<T extends Node = Node> = T extends unknown
+  ? { [K in keyof T as Exclude<K, "type">]: AstValue<T[K]> } & NodeView<T>
+  : never;
 export type AstNodeInput<T extends Node> = { [K in keyof T]: T[K] | AstValue<T[K]> | NodeInputValue<T[K]> };
 export type Materialized<T> = T extends AstList<infer Element> ? Materialized<Element>[]
   : T extends RegExp ? T
@@ -76,7 +79,11 @@ export declare class NodeView<T extends Node = Node> {
   isSame(other: unknown): boolean;
   readonly ast: AstView;
   readonly nodeId: number;
-  readonly type: T["type"];
+  get type(): T["type"];
+  set type(value: string | NodeKindId);
+  /** Native kind ID. Changing it preserves the node ID and span but resets its fields. */
+  get typeId(): NodeKindId<T["type"]>;
+  set typeId(value: NodeKindId);
   start: number;
   end: number;
   /** Read a native field by ID. Returns `undefined` if the node has no such field. */
@@ -128,7 +135,7 @@ export declare class AstView {
   /** Includes newly allocated logical nodes in addition to original native slots. */
   readonly totalNodeCount: number;
   /** Allocate a native node slot; fill required fields before checked Rust decoding. Spans use byte offsets. */
-  new_node<T extends Node = Node>(kind: (typeof NodeKind)[keyof typeof NodeKind], start?: number, end?: number): AstNode<T>;
+  new_node<T extends Node = Node>(kind: NodeKindId, start?: number, end?: number): AstNode<T>;
   /** Splice a public node list and publish its references before returning. */
   spliceList(node: AstNode | number, field: FieldId, start: number, deleteCount: number, ...values: (AstNode | NodeDescriptor | null | undefined)[]): (AstNode | null)[];
   /**
@@ -157,7 +164,7 @@ export declare class AstView {
   readonly comments: AstComment[];
   readonly diagnostics: readonly AstDiagnostic[];
   node(id: number): AstNode | null;
-  kind(id: number): (typeof NodeKind)[keyof typeof NodeKind];
+  kind(id: number): NodeKindId;
   /** Read a child ID without creating a view. An absent child returns `0xffffffff`. */
   ref(id: number, field: FieldId, allowMissing?: boolean): number;
   byteStart(id: number): number;

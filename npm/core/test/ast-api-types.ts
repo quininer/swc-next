@@ -1,5 +1,5 @@
-import { Field } from "@swc-next/ast2";
-import type { AstView, AstList, NodeView, NodeKind, FieldId, Node, Program, VariableDeclaration, VariableDeclarator, AstNode, AstNodeInput, NodeDescriptor } from "@swc-next/ast2";
+import { Field, NodeKind } from "@swc-next/ast2";
+import type { AstView, AstList, NodeView, NodeKindId, FieldId, Node, Program, VariableDeclaration, VariableDeclarator, AstNode, AstNodeInput, NodeDescriptor } from "@swc-next/ast2";
 import type { AstView as RuntimeView } from "../../../packages/ast2/index.ts";
 import type { AstList as RuntimeList } from "../../../packages/ast2/list.ts";
 import type { NodeView as RuntimeNode } from "../../../packages/ast2/node.ts";
@@ -38,8 +38,25 @@ declare const handle: NodeView<Program>;
 const copied: AstNodeInput<Program> = view.cloneNode(handle);
 void copied;
 
-// Deep cloning accepts typed views from any AST and returns the same shape.
+const kind: NodeKindId = view.kind(handle.nodeId);
+handle.typeId = kind;
+
+// Both getters retain their own discriminant when their setters are used.
 declare const source: AstNode<Program>;
+source.type = "Program";
+source.type = NodeKind.Program;
+source.typeId = NodeKind.Program;
+const sourceType: "Program" = source.type;
+const sourceTypeId: NodeKindId<"Program"> = source.typeId;
+void [sourceType, sourceTypeId];
+// @ts-expect-error A kind name is not a kind ID.
+source.typeId = "Program";
+// @ts-expect-error An arbitrary number is not a kind ID.
+source.typeId = handle.nodeId;
+// @ts-expect-error An out-of-range literal is not a kind ID.
+source.typeId = 256;
+
+// Deep cloning accepts typed views from any AST and returns the same shape.
 const cloned: AstNode<Program> = view.clone(source);
 void cloned;
 

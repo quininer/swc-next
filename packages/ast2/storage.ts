@@ -1,6 +1,6 @@
 import type { AstView } from "./index.ts";
 import type { FieldDescriptor } from "./types.ts";
-import { layouts, nativeExtraCounts, nativeField, NodeKind } from "./schema.ts";
+import { layouts, nativeExtraCounts, nativeField, NodeKind, NODE_KIND_COUNT, type NodeKindId } from "./schema.ts";
 import { initialFields } from "./protocol.ts";
 import { NONE, NONE as U32_MAX, ROW_SIZE, EXTRA_SIZE, UTF8_STRINGS } from "./layout.ts";
 
@@ -318,7 +318,7 @@ export function ensureArena(ast: AstView) {
   return ast._arena;
 }
 
-export function fieldLocation(ast: AstView, id: number, descriptor: FieldDescriptor, kind = ast.kind(id)) {
+export function fieldLocation(ast: AstView, id: number, descriptor: FieldDescriptor, kind: number = ast.kind(id)) {
   const layout = layouts[kind], arena = ast._arena;
   const row = ast.row(id);
   let view = row === -1 ? ast._view : arena!.view!;
@@ -354,8 +354,13 @@ export function newNodeRaw(ast: AstView, kind: number, start = 0, end = start, b
   return id;
 }
 
-/** Write a complete node slot in its current storage, allocating only new logical IDs. */
-export function writeNode(ast: AstView, id: number, kind: number, start: number, end: number) {
+/** Change a node's native kind in place, preserving its identity and span. */
+export function writeKind(ast: AstView, id: number, kind: NodeKindId): void {
+  if (kind === ast.kind(id)) { return; }
+  if (!Number.isInteger(kind) || kind < 0 || kind >= NODE_KIND_COUNT) {
+    throw new RangeError("Invalid AST node kind");
+  }
+  const start = ast.byteStart(id), end = ast.byteEnd(id);
   const capacities = ast._listCapacities;
   if (capacities?.delete(id) && capacities.size === 0) { ast._listCapacities = undefined; }
   const layout = layouts[kind], count = nativeExtraCounts[kind];
@@ -379,6 +384,8 @@ export function writeNode(ast: AstView, id: number, kind: number, start: number,
     }
   }
   initializeFields(ast, id, kind);
+  ast._listVersion++;
+  ast._editVersion++;
 }
 
 export function setSpan(ast: AstView, id: number, start: number, end: number) {

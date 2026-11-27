@@ -42,7 +42,7 @@ test("AST buffers own the source and lazily create node views", () => {
   assert.equal(ast.buffer.buffer, bytes.buffer);
   assert.equal(ast.sourceBytes.buffer, bytes.buffer);
   assert.equal(ast.materializedNodeCount, 0);
-  assert.equal(ast.program.type, "Program");
+  assert.equal(ast.program.typeId, NodeKind.Program);
   assert.equal(ast.materializedNodeCount, 1);
   const statement = ast.program.body.get(0);
   assert.ok(statement.isSame(ast.program.body.get(0)));
@@ -112,7 +112,7 @@ test("UTF-16 offsets are computed in JS only when position fields are read", () 
     return convert(byte);
   };
   const statement = ast.program.body.get(0);
-  assert.equal(statement.type, "VariableDeclaration");
+  assert.equal(statement.typeId, NodeKind.VariableDeclaration);
   assert.equal(statement.declarators.get(0).id.name, "value");
   assert.equal(ast.comments[0].value, " ascii ");
   assert.equal(conversions, 0);
@@ -126,7 +126,7 @@ test("non-ASCII source strings preserve values", () => {
   const source = '/* 中😀 */ const 文 = "é";';
   const ast = readAst(parseBufferSync(source));
   const statement = ast.program.body.get(0);
-  assert.equal(statement.type, "VariableDeclaration");
+  assert.equal(statement.typeId, NodeKind.VariableDeclaration);
   assert.equal(statement.declarators.get(0).id.name, "文");
   assert.equal(ast.comments[0].value, " 中😀 ");
   const byteStart = Buffer.byteLength(source.slice(0, source.indexOf("const")));
@@ -270,14 +270,14 @@ test("parameter and declaration fields retain TypeScript ownership", () => {
 test("TS method signatures keep their native parent", () => {
   const declarationAst = parseSync("declare function f(): void;", typescript);
   const declaration = declarationAst.program.body.get(0);
-  assert.equal(declaration.type, "TsFunction");
+  assert.equal(declaration.typeId, NodeKind.TsFunction);
   assert.equal(declaration.declare, true);
   assert.equal(declarationAst.cloneNode(declaration).type, "TsFunction");
 
   const methodAst = parseSync("class C { m(): void; }", typescript);
   const method = methodAst.program.body.get(0).body.body.get(0);
-  assert.equal(method.type, "TsMethodDefinition");
-  assert.equal(method.value.type, "TsFunction");
+  assert.equal(method.typeId, NodeKind.TsMethodDefinition);
+  assert.equal(method.value.typeId, NodeKind.TsFunction);
   assert.equal("isMethod" in method.value, false);
   assert.ok(methodAst.cloneNode(method).value.isSame(method.value));
 });
@@ -288,13 +288,13 @@ test("parameter views expose their pattern and initializer independently", () =>
   const id = parameter.nodeId;
   assert.equal(ast.kind(id), NodeKind.FormalParameter);
   assert.equal(parameter.initializer, null);
-  assert.equal(parameter.typeAnnotation.type, "TsTypeAnnotation");
+  assert.equal(parameter.typeAnnotation.typeId, NodeKind.TsTypeAnnotation);
 
   const initializer = ast.new_node(NodeKind.NumericLiteral);
   initializer.value = 1;
   parameter.initializer = initializer;
   assert.equal(parameter.nodeId, id);
-  assert.equal(parameter.type, "FormalParameter");
+  assert.equal(parameter.typeId, NodeKind.FormalParameter);
   assert.ok(parameter.initializer.isSame(initializer));
 
   const previous = parameter.pattern;
@@ -308,11 +308,11 @@ test("parameter views expose their pattern and initializer independently", () =>
 test("parameter containers expose their own items and rest field", () => {
   const ast = expectRoundTrip("function f(this: T, value: T, ...rest: T[]) {}", typescript);
   const fn = ast.program.body.get(0), container = fn.params;
-  assert.equal(fn.thisParam.type, "TsThisParameter");
-  assert.equal(container.type, "FormalParameters");
+  assert.equal(fn.thisParam.typeId, NodeKind.TsThisParameter);
+  assert.equal(container.typeId, NodeKind.FormalParameters);
   assert.equal(container.items.length, 1);
   assert.ok(ast.node(container.nodeId).items.get(0).isSame(container.items.get(0)));
-  assert.equal(container.rest.type, "FormalParameterRest");
+  assert.equal(container.rest.typeId, NodeKind.FormalParameterRest);
 });
 
 test("class, module and JSX nodes round-trip through AST storage", () => {
@@ -354,11 +354,11 @@ test("native field availability does not depend on the source language", () => {
 
 test("variable and catch annotations stay on their native owners", () => {
   const declaration = parseSync("let value: string;", typescript).program.body.get(0).declarators.get(0);
-  assert.equal(declaration.typeAnnotation.typeAnnotation.type, "TsStringKeyword");
+  assert.equal(declaration.typeAnnotation.typeAnnotation.typeId, NodeKind.TsStringKeyword);
   assert.equal(declaration.id.typeAnnotation, undefined);
 
   const handler = parseSync("try {} catch (error: unknown) {}", typescript).program.body.get(0).handler;
-  assert.equal(handler.typeAnnotation.typeAnnotation.type, "TsUnknownKeyword");
+  assert.equal(handler.typeAnnotation.typeAnnotation.typeId, NodeKind.TsUnknownKeyword);
   assert.equal(handler.param.typeAnnotation, undefined);
 });
 
@@ -492,7 +492,7 @@ test("deep AST access and materialization do not recurse through the whole tree"
   const ast = parseSync(source, typescript);
   let type = ast.program.body.get(0).typeAnnotation;
   for (let i = 0; i < 600; i++) { type = type.elementType; }
-  assert.equal(type.type, "TsStringKeyword");
+  assert.equal(type.typeId, NodeKind.TsStringKeyword);
   assert.deepEqual(ast.materialize(), parseSync(source, typescript).materialize());
 });
 
@@ -537,14 +537,14 @@ test("parent relationships belong to the active walker context", () => {
   const relationships = program => {
     const result = [];
     walk(program, { enter(context) {
-      result.push([context.type, context.parent?.type, context.key]);
+      result.push([context.type, context.parent?.typeId, context.key]);
     } });
     return result;
   };
   const relationshipsPlain = root => {
     const result = [];
     const visit = (node, parent, key) => {
-      result.push([node.type, parent?.type, key]);
+      result.push([node.type, parent == null ? undefined : NodeKind[parent.type], key]);
       for (const childKey of visitorKeys[node.type] ?? []) {
         const value = node[childKey];
         if (Array.isArray(value)) {

@@ -177,3 +177,4 @@ export declare const NodeKind: {
   readonly JsxText: 174;
   readonly JsxSpreadChild: 175;
 };
+export type NodeKindId<Name extends keyof typeof NodeKind = keyof typeof NodeKind> = (typeof NodeKind)[Name];

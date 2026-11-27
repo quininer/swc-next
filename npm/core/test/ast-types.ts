@@ -21,7 +21,7 @@ const ast = parseSync("function f(value: string) { return value; }", {
 const program: AstNode<Program> = ast.program;
 const body: AstList<AstNode<Program["body"][number]>> = program.body;
 const node: AstNode = body.get(0)!;
-if (node.type === "Function") {
+if (node.typeId === NodeKind.Function) {
   const params: AstList<AstNode<FormalParameterItem>> = node.params.items;
   params.map((parameter) => parameter.type);
   if (node.id) { node.id.name = "renamed"; }
@@ -60,7 +60,7 @@ const editBuffer: Uint8Array | null = ast.editBuffer;
 const count: number = ast.totalNodeCount;
 void [created, removed, editBuffer, count];
 const firstStatement = opened.body.get(0)!;
-if (firstStatement.type === "ExpressionStatement") {
+if (firstStatement.typeId === NodeKind.ExpressionStatement) {
   const expression: AstNode<Expr> = firstStatement.expression;
   void expression;
 }

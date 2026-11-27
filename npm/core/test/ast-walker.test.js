@@ -83,7 +83,7 @@ test("traversal resolves remaining fields after a kind change", () => {
       if (changed || ctx.key !== "callee") { return; }
       changed = true;
       const parent = ctx.parent;
-      parent.type = "TsInstantiationExpression";
+      parent.typeId = NodeKind.TsInstantiationExpression;
       parent.set(Field.expression, ctx.node);
       const argumentsNode = ast.new_node(NodeKind.TsTypeParameterInstantiation);
       argumentsNode.params.push(ast.new_node(NodeKind.TsStringKeyword));

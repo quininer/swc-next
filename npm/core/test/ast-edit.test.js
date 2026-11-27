@@ -553,8 +553,8 @@ test("TypeScript parameter wrappers and annotations survive incremental edits", 
   const annotation = transform(
     'const x: string = "value";',
     (program, ast) => {
-      program.body.get(0).declarators.get(0).typeAnnotation.typeAnnotation.type =
-        "TsNumberKeyword";
+      const keyword = program.body.get(0).declarators.get(0).typeAnnotation.typeAnnotation;
+      keyword.typeId = NodeKind.TsNumberKeyword;
     },
     typescript,
   );
@@ -583,7 +583,8 @@ test("TypeScript parameter wrappers and annotations survive incremental edits", 
   const thisParam = transform(
     "function f(this: C, x: number) {}",
     (program, ast) => {
-      program.body.get(0).thisParam.typeAnnotation.typeAnnotation.type = "TsStringKeyword";
+      const keyword = program.body.get(0).thisParam.typeAnnotation.typeAnnotation;
+      keyword.typeId = NodeKind.TsStringKeyword;
     },
     typescript,
   );
@@ -599,7 +600,7 @@ test("walker replacements and JSX attribute mutations use both buffers", () => {
     walk(program, {
       MemberExpression(context) {
         const node = context.node;
-        if (node.object.type === "MetaProperty")
+        if (node.object.typeId === NodeKind.MetaProperty)
           { node.object = identifier(ast, "process"); }
       },
     });
@@ -628,13 +629,45 @@ test("walker replacements and JSX attribute mutations use both buffers", () => {
   const changedType = transform("original;", (program, ast) => {
     const node = program.body.get(0).expression;
     const other = program.body.get(0).expression;
-    assert.equal(other.type, "IdentifierReference");
-    node.type = "NumericLiteral";
+    assert.equal(other.typeId, NodeKind.IdentifierReference);
+    node.typeId = NodeKind.NumericLiteral;
     node.value = 2;
-    assert.equal(node.type, "NumericLiteral");
-    assert.equal(other.type, "NumericLiteral");
+    assert.equal(node.typeId, NodeKind.NumericLiteral);
+    assert.equal(other.typeId, NodeKind.NumericLiteral);
   });
   expectCode(changedType.code, "2;");
+});
+
+test("numeric kind edits preserve node identity and span", () => {
+  const ast = parseSync("before;");
+  const statement = ast.program.body.get(0);
+  const node = statement.expression, peer = ast.node(node.nodeId);
+  const span = [node.start, node.end];
+  node.typeId = NodeKind.NumericLiteral;
+  node.value = 2;
+  node.typeId = NodeKind.NumericLiteral;
+  assert.ok(node.isSame(peer));
+  assert.equal(peer.typeId, NodeKind.NumericLiteral);
+  assert.equal(peer.value, 2);
+  assert.deepEqual([peer.start, peer.end], span);
+
+  const delta = ast.new_node(NodeKind.StringLiteral, ...span);
+  delta.typeId = NodeKind.NumericLiteral;
+  delta.value = 3;
+  statement.expression = delta;
+  assert.ok(statement.expression.isSame(delta));
+  expectCode(generateSync(ast.program).code, "3;");
+
+  assert.throws(() => { node.typeId = -1; }, RangeError);
+  assert.throws(() => { node.typeId = 1.5; }, RangeError);
+  assert.throws(() => { node.typeId = 256; }, RangeError);
+  assert.throws(() => { node.type = "constructor"; }, TypeError);
+  assert.throws(() => { node.type = 256; }, RangeError);
+  assert.equal(peer.value, 2);
+
+  node.type = "StringLiteral";
+  assert.equal(peer.type, "StringLiteral");
+  assert.equal(peer.typeId, NodeKind.StringLiteral);
 });
 
 test("encoding exposes live storage and explicit copies preserve snapshots", () => {
@@ -695,7 +728,7 @@ test("native ancestor references retain holes and typed edits across buffer grow
 
   const changedType = transform("call(original);", (program, ast) => {
     const argument = program.body.get(0).expression.arguments.get(0);
-    argument.type = "NumericLiteral";
+    argument.typeId = NodeKind.NumericLiteral;
     argument.value = 7;
   });
   expectCode(changedType.code, "call(7);");
@@ -704,14 +737,15 @@ test("native ancestor references retain holes and typed edits across buffer grow
   const call = replacedCall.program.body.get(0).expression;
   const callee = call.callee;
   const argument = call.arguments.get(0);
-  call.type = "NumericLiteral";
+  call.typeId = NodeKind.NumericLiteral;
   call.value = 9;
   assert.equal(callee.name, "call");
   assert.equal(argument.name, "value");
   expectCode(generateSync(replacedCall.program).code, "9;");
 
   const changedAnnotation = transform("call<string>(original);", (program, ast) => {
-    program.body.get(0).expression.typeArguments.params.get(0).type = "TsNumberKeyword";
+    const keyword = program.body.get(0).expression.typeArguments.params.get(0);
+    keyword.typeId = NodeKind.TsNumberKeyword;
   }, typescript);
   expectCode(changedAnnotation.code, "call<number>(original);", typescript);
 
@@ -746,7 +780,7 @@ test("Rust checks native field constraints after kind changes", () => {
   const callAst = parseSync('call("source");');
   const argument = callAst.program.body.get(0).expression.arguments.get(0);
   const argumentId = argument.nodeId;
-  argument.type = "NumericLiteral";
+  argument.typeId = NodeKind.NumericLiteral;
   argument.value = 1;
   assert.equal(argument.nodeId, argumentId);
   assert.equal(callAst.kind(argumentId), NodeKind.NumericLiteral);
@@ -757,16 +791,16 @@ test("Rust checks native field constraints after kind changes", () => {
 
   const moduleAst = parseSync('import value from "source";');
   const source = moduleAst.program.body.get(0).source;
-  assert.doesNotThrow(() => { source.type = "NumericLiteral"; source.value = 1; });
+  assert.doesNotThrow(() => { source.typeId = NodeKind.NumericLiteral; source.value = 1; });
   assert.doesNotThrow(() => moduleAst.encode());
   assert.throws(() => generateBuffersSync(...moduleAst.encode()));
-  source.type = "StringLiteral";
+  source.typeId = NodeKind.StringLiteral;
   source.value = "source";
   expectCode(generateSync(moduleAst.program).code, 'import value from "source";');
 
   const detached = moduleAst.new_node(NodeKind.BindingIdentifier);
-  detached.type = "StringLiteral";
-  assert.equal(detached.type, "StringLiteral");
+  detached.typeId = NodeKind.StringLiteral;
+  assert.equal(detached.typeId, NodeKind.StringLiteral);
   assert.equal(detached.get(Field.name), undefined);
   assert.throws(() => detached.set(Field.name, "ignored"), TypeError);
   detached.value = "detached";
@@ -801,7 +835,8 @@ test("Rust rejects cyclic and invalid edits during checked decoding", () => {
   assert.deepEqual(ast.buffer, after);
 
   const binding = parseSync("const value = 1;");
-  assert.doesNotThrow(() => { binding.program.body.get(0).declarators.get(0).id.type = "NumericLiteral"; });
+  const name = binding.program.body.get(0).declarators.get(0).id;
+  assert.doesNotThrow(() => name.typeId = NodeKind.NumericLiteral);
   assert.doesNotThrow(() => binding.encode());
   assert.throws(() => generateSync(binding.program));
 
@@ -820,7 +855,8 @@ test("Rust rejects cyclic and invalid edits during checked decoding", () => {
   const reentrant = parseSync("const value = 1;");
   const options = {
     get minify() {
-      reentrant.program.body.get(0).declarators.get(0).id.type = "NumericLiteral";
+      const name = reentrant.program.body.get(0).declarators.get(0).id;
+      name.typeId = NodeKind.NumericLiteral;
       return true;
     },
   };
@@ -945,7 +981,7 @@ test("buffer list traversal preserves callbacks and on-demand structural edits",
     walk(program, {
       ExpressionStatement(context) {
         const node = context.node;
-        const name = node.expression.type === "CallExpression" ? node.expression.callee.name : node.expression.name;
+        const name = node.expression.typeId === NodeKind.CallExpression ? node.expression.callee.name : node.expression.name;
         visits.push(name);
         if (name === "first") {
           context.insertBefore(expression(identifier(ast, "before")));
@@ -962,7 +998,7 @@ test("buffer list traversal preserves callbacks and on-demand structural edits",
     walk(program, {
       ExpressionStatement(context) {
         const node = context.node;
-        const name = node.expression.type === "CallExpression" ? node.expression.callee.name : node.expression.name;
+        const name = node.expression.typeId === NodeKind.CallExpression ? node.expression.callee.name : node.expression.name;
         appendedVisits.push(name);
         if (name === "first") { context.parent.body.push(expression(identifier(ast, "last"))); }
       },

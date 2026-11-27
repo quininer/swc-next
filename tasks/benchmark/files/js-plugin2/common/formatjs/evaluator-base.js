@@ -1,5 +1,6 @@
 // Static evaluation over numeric node IDs. Subclasses provide `binding` and
 // set `ast`; stored bindings materialize a view only when evaluation reads them.
+import { NodeKind } from '@swc-next/core/ffi2';
 import { UNKNOWN, unwrap } from './evaluate-common.js';
 
 export class EvaluatorBase {
@@ -15,11 +16,11 @@ export class EvaluatorBase {
     if (!binding) { return; }
     const previous = unwrap(this.resolve(this.values.get(binding)));
     const next = unwrap(expression);
-    if (previous?.type === 'ObjectExpression' && next?.type !== 'ObjectExpression') {
+    if (previous?.typeId === NodeKind.ObjectExpression && next?.typeId !== NodeKind.ObjectExpression) {
       // React Compiler caches immutable object literals in $[number].
-      if (next?.type === 'MemberExpression' && !next.optional && next.computed
-        && unwrap(next.object)?.type === 'IdentifierReference' && unwrap(next.object).name === '$'
-        && unwrap(next.property)?.type === 'NumericLiteral') { return; }
+      if (next?.typeId === NodeKind.MemberExpression && !next.optional && next.computed
+        && unwrap(next.object)?.typeId === NodeKind.IdentifierReference && unwrap(next.object).name === '$'
+        && unwrap(next.property)?.typeId === NodeKind.NumericLiteral) { return; }
       this.values.delete(binding);
     } else if (expression) { this.values.set(binding, expression.nodeId); }
     else { this.values.delete(binding); }
@@ -28,34 +29,34 @@ export class EvaluatorBase {
   invalidate(target) {
     target = unwrap(target);
     if (!target) { return; }
-    if (target.type === 'MemberExpression') {
+    if (target.typeId === NodeKind.MemberExpression) {
       let base = target.object;
-      while (unwrap(base)?.type === 'MemberExpression') { base = unwrap(base).object; }
+      while (unwrap(base)?.typeId === NodeKind.MemberExpression) { base = unwrap(base).object; }
       target = unwrap(base);
     }
-    if (target.type === 'IdentifierReference' || target.type === 'BindingIdentifier') { this.values.delete(this.binding(target)); }
-    else if (target.type === 'ObjectPattern') {
+    if (target.typeId === NodeKind.IdentifierReference || target.typeId === NodeKind.BindingIdentifier) { this.values.delete(this.binding(target)); }
+    else if (target.typeId === NodeKind.ObjectPattern) {
       for (const p of target.properties) { this.invalidate(p.value); }
       this.invalidate(target.rest);
     }
-    else if (target.type === 'ArrayPattern') {
+    else if (target.typeId === NodeKind.ArrayPattern) {
       for (const p of target.elements) { this.invalidate(p); }
       this.invalidate(target.rest);
     }
-    else if (target.type === 'AssignmentPattern') { this.invalidate(target.left); }
-    else if (target.type === 'BindingRestElement') { this.invalidate(target.argument); }
+    else if (target.typeId === NodeKind.AssignmentPattern) { this.invalidate(target.left); }
+    else if (target.typeId === NodeKind.BindingRestElement) { this.invalidate(target.argument); }
   }
 
   object(expression, depth = 0) {
     if (depth > 16) { return; }
     const node = unwrap(expression);
-    if (node?.type === 'ObjectExpression') { return node; }
-    if (node?.type === 'IdentifierReference') { return this.object(this.resolve(this.values.get(this.binding(node))), depth + 1); }
-    if (node?.type === 'MemberExpression') { return this.object(this.member(node, depth + 1), depth + 1); }
+    if (node?.typeId === NodeKind.ObjectExpression) { return node; }
+    if (node?.typeId === NodeKind.IdentifierReference) { return this.object(this.resolve(this.values.get(this.binding(node))), depth + 1); }
+    if (node?.typeId === NodeKind.MemberExpression) { return this.object(this.member(node, depth + 1), depth + 1); }
   }
 
   key(node, depth = 0) {
-    if (!node.computed && (node.key ?? node.property)?.type === 'IdentifierName') { return (node.key ?? node.property).name; }
+    if (!node.computed && (node.key ?? node.property)?.typeId === NodeKind.IdentifierName) { return (node.key ?? node.property).name; }
     const value = this.value(node.key ?? node.property, depth + 1);
     return value === UNKNOWN ? UNKNOWN : String(value);
   }
@@ -67,7 +68,7 @@ export class EvaluatorBase {
     if (!object || key === UNKNOWN) { return; }
     for (let i = object.properties.length - 1; i >= 0; i--) {
       const property = object.properties.get(i);
-      if (property.type !== 'ObjectProperty') { return; }
+      if (property.typeId !== NodeKind.ObjectProperty) { return; }
       const propertyKey = this.key(property, depth + 1);
       if (propertyKey === UNKNOWN) { return; }
       if (propertyKey !== key) { continue; }
@@ -80,15 +81,15 @@ export class EvaluatorBase {
     if (depth > 16) { return UNKNOWN; }
     const node = unwrap(expression);
     if (!node) { return UNKNOWN; }
-    switch (node.type) {
-      case 'StringLiteral':
-      case 'NumericLiteral':
-      case 'BooleanLiteral': return node.value;
-      case 'NullLiteral': return null;
-      case 'BigIntLiteral': return BigInt(node.raw.replaceAll('_', ''));
-      case 'IdentifierReference': return this.value(this.resolve(this.values.get(this.binding(node))), depth + 1);
-      case 'MemberExpression': return this.value(this.member(node, depth + 1), depth + 1);
-      case 'TemplateLiteral': {
+    switch (node.typeId) {
+      case NodeKind.StringLiteral:
+      case NodeKind.NumericLiteral:
+      case NodeKind.BooleanLiteral: return node.value;
+      case NodeKind.NullLiteral: return null;
+      case NodeKind.BigIntLiteral: return BigInt(node.raw.replaceAll('_', ''));
+      case NodeKind.IdentifierReference: return this.value(this.resolve(this.values.get(this.binding(node))), depth + 1);
+      case NodeKind.MemberExpression: return this.value(this.member(node, depth + 1), depth + 1);
+      case NodeKind.TemplateLiteral: {
         let result = '';
         for (let i = 0; i < node.quasis.length; i++) {
           const quasi = node.quasis.get(i);
@@ -102,7 +103,7 @@ export class EvaluatorBase {
         }
         return result;
       }
-      case 'UnaryExpression': {
+      case NodeKind.UnaryExpression: {
         const value = this.value(node.argument, depth + 1);
         if (value === UNKNOWN) { return UNKNOWN; }
         if (node.operator === 'LogicalNot') { return !value; }
@@ -111,7 +112,7 @@ export class EvaluatorBase {
         if (node.operator === 'Positive' && typeof value !== 'bigint') { return +value; }
         return UNKNOWN;
       }
-      case 'BinaryExpression': {
+      case NodeKind.BinaryExpression: {
         if (node.operator !== 'Add') { return UNKNOWN; }
         const left = this.value(node.left, depth + 1);
         const right = this.value(node.right, depth + 1);
@@ -120,7 +121,7 @@ export class EvaluatorBase {
         if (typeof left === 'bigint' || typeof right === 'bigint') { return UNKNOWN; }
         return Number(left) + Number(right);
       }
-      case 'ConditionalExpression': {
+      case NodeKind.ConditionalExpression: {
         const test = this.value(node.test, depth + 1);
         return test === UNKNOWN ? UNKNOWN : this.value(test ? node.consequent : node.alternate, depth + 1);
       }
@@ -131,9 +132,9 @@ export class EvaluatorBase {
   description(object, forHash) {
     const entries = new Map();
     for (const property of object.properties) {
-      if (property.type !== 'ObjectProperty' || property.computed || property.shorthand || property.method || property.kind !== 'Init') { continue; }
+      if (property.typeId !== NodeKind.ObjectProperty || property.computed || property.shorthand || property.method || property.kind !== 'Init') { continue; }
       const key = this.key(property);
-      const value = forHash ? this.value(property.value) : property.value.type === 'StringLiteral' ? property.value.value : UNKNOWN;
+      const value = forHash ? this.value(property.value) : property.value.typeId === NodeKind.StringLiteral ? property.value.value : UNKNOWN;
       if (key === UNKNOWN || value === UNKNOWN || (!forHash && typeof value !== 'string')) { continue; }
       if (typeof value === 'string' || typeof value === 'boolean' || typeof value === 'number') { entries.set(key, value); }
     }

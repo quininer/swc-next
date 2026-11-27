@@ -155,8 +155,8 @@ Babel `NodePath` plugins are not directly compatible.
 
 ### TypeScript
 
-`NodeType` is generated from the native node kinds. Default hooks
-narrow `node.type`; node fields are typed through `AstNode` from
+`NodeType` is generated from the native node names. Named hooks narrow
+`node.type` and `node.typeId`; node fields are typed through `AstNode` from
 `@swc-next/ast2`. Consumers can supply a discriminated node union with
 `WalkHooks<State, Nodes>` and `walk<Root, State, Nodes>(root, hooks, state)` for
 field-level checking.

@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { AstView } from "@swc-next/ast2";
 import * as core from "@swc-next/core/ffi2";
-import { langFromPath, parseSync, sourceTypeFromPath, transformSync } from "@swc-next/core/ffi2";
+import { NodeKind, langFromPath, parseSync, sourceTypeFromPath, transformSync } from "@swc-next/core/ffi2";
 import { parseSync as parseStandalone } from "@swc-next/parser/ffi2";
 
 test("parser options use strings without enum value exports", () => {
@@ -21,7 +21,7 @@ test("parser options use strings without enum value exports", () => {
   assert.ok(result instanceof AstView);
   assert.equal(result.meta.sourceType, "script");
   assert.deepEqual(result.comments, []);
-  assert.equal(result.program.body.get(0).declarators.get(0).typeAnnotation.type, "TsTypeAnnotation");
+  assert.equal(result.program.body.get(0).declarators.get(0).typeAnnotation.typeId, NodeKind.TsTypeAnnotation);
 });
 
 test("decoder preserves nested types through the lazy program getter", () => {
@@ -31,10 +31,10 @@ test("decoder preserves nested types through the lazy program getter", () => {
   const program = result.program;
   let type = program.body.get(0).typeAnnotation;
   for (let index = 0; index < depth; index++) {
-    assert.equal(type.type, "TsArrayType");
+    assert.equal(type.typeId, NodeKind.TsArrayType);
     type = type.elementType;
   }
-  assert.equal(type.type, "TsStringKeyword");
+  assert.equal(type.typeId, NodeKind.TsStringKeyword);
   assert.ok(AstView.isSame(result.program, program));
 
   const tsx = parseSync(source, { lang: "tsx" });
@@ -51,8 +51,8 @@ test("parseSync exposes the program lazily", () => {
   assert.equal(descriptor.configurable, true);
 
   const program = result.program;
-  assert.equal(program.type, "Program");
-  assert.equal(program.body.get(0).type, "VariableDeclaration");
+  assert.equal(program.typeId, NodeKind.Program);
+  assert.equal(program.body.get(0).typeId, NodeKind.VariableDeclaration);
   assert.ok(result.program.isSame(program));
 });
 
@@ -196,7 +196,7 @@ test("parseSync exposes parser diagnostics lazily", () => {
   assert.equal(error.end, 7);
   assert.deepEqual(error.labels, []);
   assert.deepEqual(result.diagnostics, result.diagnostics);
-  assert.equal(result.program.type, "Program");
+  assert.equal(result.program.typeId, NodeKind.Program);
 });
 
 test("parseSync returns an empty diagnostics array for valid input", () => {

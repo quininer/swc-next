@@ -28,8 +28,8 @@ test("visits schema children with state and parent context", () => {
       expect(ctx.key).toBe("expression");
       expect(ctx.index).toBeNull();
       expect(ctx.parent.isSame(ast.node(ctx.parentId))).toBe(true);
-      expect(ctx.ancestors().map((ancestor) => ancestor.type))
-        .toEqual(["Program", "ExpressionStatement"]);
+      expect(ctx.ancestors().map((ancestor) => ancestor.typeId))
+        .toEqual([NodeKind.Program, NodeKind.ExpressionStatement]);
       expect(ctx.nodeId).toBe(ctx.node.nodeId);
       expect(ctx.kind).toBe(NodeKind.IdentifierReference);
       expect(ctx.type).toBe("IdentifierReference");
@@ -82,7 +82,7 @@ test("replacement visits new children and selects leave hooks for the new type",
     UnaryExpression: { leave(ctx) { ctx.replace(identifier(ast, "final")); } },
   });
   expect(seen).toEqual(["after"]);
-  expect(program.body.get(0).expression.type).toBe("IdentifierReference");
+  expect(program.body.get(0).expression.typeId).toBe(NodeKind.IdentifierReference);
   expect(program.body.get(0).expression.name).toBe("final");
 });
 
@@ -149,8 +149,8 @@ test("context insertions accept kind descriptors", () => {
       ctx.insertAfter({ kind: NodeKind.DebuggerStatement });
     },
   });
-  expect(program.body.toArray().map((node) => node.type))
-    .toEqual(["EmptyStatement", "EmptyStatement", "ExpressionStatement", "DebuggerStatement"]);
+  expect(program.body.toArray().map((node) => node.typeId))
+    .toEqual([NodeKind.EmptyStatement, NodeKind.EmptyStatement, NodeKind.ExpressionStatement, NodeKind.DebuggerStatement]);
 });
 
 test("context edits reject plain ESTree objects", () => {
@@ -184,7 +184,7 @@ test("contexts are reused, nested walks are isolated and saved contexts expire",
     IdentifierReference(ctx) {
       const node = ctx.node;
       contexts.push(ctx);
-      ancestors.push(ctx.ancestors().map((ancestor) => ancestor.type));
+      ancestors.push(ctx.ancestors().map((ancestor) => ancestor.typeId));
       walk(parseSync("nested;").program, {
         IdentifierReference(nested) {
           expect(nested).not.toBe(ctx);
@@ -196,8 +196,8 @@ test("contexts are reused, nested walks are isolated and saved contexts expire",
   });
   expect(contexts[0]).toBe(contexts[1]);
   expect(ancestors).toEqual([
-    ["Program", "ExpressionStatement"],
-    ["Program", "ExpressionStatement"],
+    [NodeKind.Program, NodeKind.ExpressionStatement],
+    [NodeKind.Program, NodeKind.ExpressionStatement],
   ]);
   expect(() => contexts[0].parent).toThrow(/only valid/);
   expect(() => contexts[0].replace(identifier(ast, "bad"))).toThrow(/only valid/);
@@ -236,8 +236,8 @@ test("parameter patterns keep their native owner as parent", () => {
   const seen = [];
   walk(ast.program, {
     BindingIdentifier(ctx) {
-      if (ctx.node.name === "a") seen.push([ctx.parentId, ctx.parent.type, ctx.key, ctx.index]);
+      if (ctx.node.name === "a") seen.push([ctx.parentId, ctx.parent.typeId, ctx.key, ctx.index]);
     },
   });
-  expect(seen).toEqual([[pattern.nodeId, "ArrayPattern", "elements", 0]]);
+  expect(seen).toEqual([[pattern.nodeId, NodeKind.ArrayPattern, "elements", 0]]);
 });

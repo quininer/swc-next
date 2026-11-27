@@ -4,7 +4,7 @@ import { AstList, ListEdit, isList, listAt } from "./list.ts";
 import type { ListInput } from "./list.ts";
 import { NodeView } from "./node.ts";
 import { enums, nativeField, NodeKind } from "./schema.ts";
-import { writeNode, setSpan, fieldLocation, ensureArena } from "./storage.ts";
+import { setSpan, fieldLocation, ensureArena } from "./storage.ts";
 import { Field, languages, sourceTypes } from "./protocol.ts";
 import { NONE } from "./layout.ts";
 
@@ -39,17 +39,6 @@ export function writeReferencesAt(ast: AstView, owner: number, kind: number,
   const { view, offset } = fieldLocation(ast, owner, descriptor, kind);
   view.setUint32(offset, start, true);
   view.setUint32(offset + 4, start + ids.length, true);
-}
-
-/** Change a node's native kind without changing its identity or span. */
-export function writeType(ast: AstView, id: number, type: string): void {
-  const kind = ast.kind(id);
-  const target = NodeKind[type as keyof typeof NodeKind];
-  if (typeof target !== "number") { throw new TypeError("Unknown AST node type"); }
-  if (target === kind) { return; }
-  writeNode(ast, id, target, ast.byteStart(id), ast.byteEnd(id));
-  ast._listVersion++;
-  committed(ast);
 }
 
 export function writeSpan(ast: AstView, id: number, isStart: boolean, value: number): void {
