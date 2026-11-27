@@ -19,6 +19,8 @@ const PAYLOAD_SIZE = 16;
 
 const MEMBER_KIND = NodeKind.MemberExpression;
 const MEMBER_NAME = Field.name;
+const IDENTIFIER_NAME_KIND = NodeKind.IdentifierName;
+const IDENTIFIER_NAME_STRING = inlineStringField(IDENTIFIER_NAME_KIND, MEMBER_NAME);
 function memberOffset(field: FieldId, type: "bool" | "node"): number {
   const layout = nativeField(MEMBER_KIND, field);
   return layout && !layout[0] && layout[2] === type && !layout[3] ? layout[1] : -1;
@@ -479,7 +481,8 @@ export class AstView {
     const child = view.getInt32(offset, true);
     if (child >= 0 && child < this.#nodeCount) {
       const childKind = this._view.getUint8(this._kinds + child);
-      const string = inlineStringField(childKind, field);
+      const string = childKind === IDENTIFIER_NAME_KIND && field === MEMBER_NAME
+        ? IDENTIFIER_NAME_STRING : inlineStringField(childKind, field);
       if (string >= 0) {
         const offset = this._payloads + child * PAYLOAD_SIZE + (string & 15);
         return this.#stringAtEquals(offset, (string & 16) !== 0, this._view, expected);
