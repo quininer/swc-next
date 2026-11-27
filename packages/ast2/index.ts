@@ -11,8 +11,11 @@ import { fieldLocation, isWellFormed, newNode } from "./storage.ts";
 import { AstList, isList, listAt } from "./list.ts";
 import type { ListEntry } from "./list.ts";
 import { fieldNames, parserMeta, type FieldId } from "./protocol.ts";
-import { NONE, SPAN_SIZE, PAYLOAD_SIZE } from "./layout.ts";
+import { NONE, SPAN_SIZE } from "./layout.ts";
 import { PositionCache } from "./position.ts";
+
+// Keep the fixed wire stride local to the hot payload addressing code.
+const PAYLOAD_SIZE = 16;
 
 export { NodeKind } from "./schema.ts";
 export { Field, type FieldId } from "./protocol.ts";
