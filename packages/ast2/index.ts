@@ -7,10 +7,10 @@ import { layouts, enums, inlineNodeField, inlineStringField, nativeField, NodeKi
 import { NodeView, createNodeView, createNumericNodeView, NUMERIC_NODE_KIND } from "./node.ts";
 import { cloneNode as cloneNodeInto } from "./clone.ts";
 import { writeSpan, writeNativeField, finishEdits, writeStringAt, writeNodeAt, writeExtraNodeAt, writeBoolAt, writeNumberAt, writeEnumAt } from "./writer.ts";
-import { fieldLocation, isWellFormed, newNode } from "./storage.ts";
+import { buildLiteralArena, fieldLocation, isWellFormed, newNode } from "./storage.ts";
 import { AstList, isList, listAt } from "./list.ts";
 import type { ListEntry } from "./list.ts";
-import { Field, fieldNames, parserMeta, type FieldId } from "./protocol.ts";
+import { Field, fieldNames, initialFields, parserMeta, type FieldId } from "./protocol.ts";
 import { NONE, SPAN_SIZE } from "./layout.ts";
 import { PositionCache } from "./position.ts";
 
@@ -27,6 +27,9 @@ const MEMBER_COMPUTED = memberOffset(Field.computed, "bool");
 const MEMBER_OPTIONAL = memberOffset(Field.optional, "bool");
 const MEMBER_PROPERTY = memberOffset(Field.property, "node");
 const MEMBER_INLINE = MEMBER_COMPUTED >= 0 && MEMBER_OPTIONAL >= 0 && MEMBER_PROPERTY >= 0;
+const LITERAL_KIND = NodeKind.StringLiteral;
+const PLAIN_LITERAL = layouts[LITERAL_KIND].extra === null && initialFields[LITERAL_KIND].length === 0 &&
+  inlineStringField(LITERAL_KIND, Field.value) === 0 && inlineStringField(LITERAL_KIND, Field.raw) === 8;
 
 export { NodeKind, type NodeKindId } from "./schema.ts";
 export { Field, type FieldId } from "./protocol.ts";
@@ -70,6 +73,9 @@ export class AstView {
   #rootId = 0;
   #totalNodeCount = 0;
   #source: string | undefined = undefined;
+  // Triples of byte start, byte end, and value; no second representation until publication.
+  #pendingLiterals: (number | string)[] | null = null;
+  #pendingStringBudget = 0;
   _bytes: Uint8Array;
   readonly _flags: number = 0;
   _diagnosticLength = 0;
@@ -169,14 +175,35 @@ export class AstView {
   /** Commit the next ID after the arena has reserved its row. */
   _commitNewNode(): number { return this.#totalNodeCount++; }
   get extraDataCount() { return this._arena?.extraCount ?? this._extraCount; }
-  get stringLength() { return this._arena?.stringLength ?? this._stringLength; }
-  row(id: number): number { return this._arena === null ? -1 : this._arena.row(id); }
+  get stringLength() {
+    if (this.#pendingLiterals !== null) { this._flushPendingLiterals(); }
+    return this._arena?.stringLength ?? this._stringLength;
+  }
+  row(id: number): number {
+    if (id < this.#nodeCount) { return -1; }
+    if (this.#pendingLiterals !== null && id < this.#totalNodeCount && Number.isInteger(id)) { this._flushPendingLiterals(); }
+    return this._arena === null ? -1 : this._arena.row(id);
+  }
+  _flushPendingLiterals(): void {
+    const pending = this.#pendingLiterals;
+    if (pending === null) { return; }
+    this._arena = buildLiteralArena(this, pending, this.#pendingStringBudget);
+    this.#pendingLiterals = null;
+    this.#pendingStringBudget = 0;
+  }
   new_node<T extends Node = Node>(kind: number, start = 0, end = start): AstNode<T> {
-    const id = newNode(this, kind, start, end);
+    let id = this.#totalNodeCount;
+    if (PLAIN_LITERAL && kind === LITERAL_KIND && this._arena === null && id < NONE && id - this.#nodeCount < 0xffff &&
+        Number.isInteger(start) && Number.isInteger(end) && start >= 0 && end >= start && end <= this._sourceLength) {
+      (this.#pendingLiterals ??= []).push(start + 0, end + 0, "");
+      this.#totalNodeCount++;
+      this._editVersion++;
+    } else { id = newNode(this, kind, start, end); }
     this._createdNodeCount++;
     return createNodeView(this, id, kind as NodeKindId) as unknown as AstNode<T>;
   }
   get editBuffer() {
+    this._flushPendingLiterals();
     const arena = this._arena;
     return arena === null || !arena.rowCount && !arena.extraUsed && !arena.stringUsed
       ? null : arena.borrow(this.rootId, this._editor?.flags ?? this._flags);
@@ -226,6 +253,18 @@ export class AstView {
   _setSpan(id: number, isStart: boolean, value: number): void { writeSpan(this, id, isStart, value); }
   /** Internal fast paths for generated field setters with constant offsets. */
   _writeStringAt(id: number, offset: number, optional: boolean, value: unknown): void {
+    const pending = this.#pendingLiterals;
+    // Older or already-written rows must keep the original append-only string pool order.
+    if (pending !== null && id === this.#totalNodeCount - 1 && offset === 0 && !optional &&
+        typeof value === "string" && value.length <= 64 && pending[pending.length - 1] === "") {
+      const budget = this.#pendingStringBudget + value.length * 3;
+      if (this._stringLength + budget < NONE) {
+        pending[pending.length - 1] = value;
+        this.#pendingStringBudget = budget;
+        this._editVersion++;
+        return;
+      }
+    }
     writeStringAt(this, id, offset, optional, value);
   }
   _writeNodeAt(id: number, offset: number, value: unknown): void {
@@ -268,7 +307,7 @@ export class AstView {
   }
   validateId(id: number): void {
     if (!Number.isInteger(id) || id < 0) { throw new RangeError("Invalid AST node ID"); }
-    if (id < this.nodeCount || this._arena?.has(id)) { return; }
+    if (id < this.#nodeCount || this.#pendingLiterals !== null && id < this.#totalNodeCount || this._arena?.has(id)) { return; }
     throw new RangeError("Invalid AST node ID");
   }
   kind(id: number): NodeKindId {
@@ -277,7 +316,8 @@ export class AstView {
   }
   /** Views already hold a validated logical ID; original slots read directly. */
   _kindAt(id: number): NodeKindId {
-    const kind = id < this.#nodeCount ? this._bytes[this._kinds + (id >>> 0)] : this._arena!.kind(id);
+    const kind = id < this.#nodeCount ? this._bytes[this._kinds + (id >>> 0)]
+      : this.#pendingLiterals !== null && id < this.#totalNodeCount ? LITERAL_KIND : this._arena!.kind(id);
     if (kind === undefined || kind >= NODE_KIND_COUNT) { throw new RangeError("Unknown AST node kind"); }
     return kind as NodeKindId;
   }
@@ -291,15 +331,15 @@ export class AstView {
   }
   byteStart(id: number): number {
     this.validateId(id);
-    return id < this.#nodeCount
-      ? this._view.getUint32(this._nodes + id * SPAN_SIZE, true)
-      : this._arena!.spanStart(id);
+    if (id < this.#nodeCount) { return this._view.getUint32(this._nodes + id * SPAN_SIZE, true); }
+    const pending = this.#pendingLiterals;
+    return pending === null ? this._arena!.spanStart(id) : pending[(id - this.#nodeCount) * 3] as number;
   }
   byteEnd(id: number): number {
     this.validateId(id);
-    return id < this.#nodeCount
-      ? this._view.getUint32(this._nodes + id * SPAN_SIZE + 4, true)
-      : this._arena!.spanEnd(id);
+    if (id < this.#nodeCount) { return this._view.getUint32(this._nodes + id * SPAN_SIZE + 4, true); }
+    const pending = this.#pendingLiterals;
+    return pending === null ? this._arena!.spanEnd(id) : pending[(id - this.#nodeCount) * 3 + 1] as number;
   }
   start(id: number): number {
     return this.utf16Offset(this.byteStart(id));
@@ -546,7 +586,7 @@ export class AstView {
   string(start: number, end: number): string {
     if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start)
       { throw new RangeError("AST string out of bounds"); }
-    if (end > this.stringLength) { throw new RangeError("AST string out of bounds"); }
+    if (end > this._stringLength && end > this.stringLength) { throw new RangeError("AST string out of bounds"); }
     if (start < this._sourceLength && end > this._sourceLength) { throw new RangeError("AST string crosses source boundary"); }
     if (start === end) { return ""; }
     // Source slices avoid decoding the UTF-8 bytes for the common identifier

@@ -309,18 +309,38 @@ export class DeltaArena {
   }
 }
 
+function createArena(ast: AstView): DeltaArena {
+  return new DeltaArena({ nodeCount: ast.nodeCount, extraCount: ast._extraCount,
+    stringLength: ast._stringLength, byteLength: ast.buffer.byteLength,
+    rootId: ast.rootId, flags: ast._flags }, ast);
+}
+
 export function ensureArena(ast: AstView) {
-  if (ast._arena === null) {
-    ast._arena = new DeltaArena({ nodeCount: ast.nodeCount, extraCount: ast._extraCount,
-      stringLength: ast._stringLength, byteLength: ast.buffer.byteLength,
-      rootId: ast.rootId, flags: ast._flags }, ast);
+  if (ast._arena === null) { ast._flushPendingLiterals(); }
+  return ast._arena ??= createArena(ast);
+}
+
+/** Encode all pending literal rows into a single new backing store. */
+export function buildLiteralArena(ast: AstView, entries: (number | string)[], budget: number): DeltaArena {
+  const arena = createArena(ast);
+  const view = arena.reserve(entries.length / 3, 0, Math.max(1, budget));
+  let row = arena.rowsOffset;
+  for (let i = 0; i < entries.length; i += 3, row += ROW_SIZE) {
+    const value = entries[i + 2] as string;
+    const range = value === "" ? undefined : arena.internString(value);
+    view.setUint32(row, entries[i] as number, true);
+    view.setUint32(row + 4, entries[i + 1] as number, true);
+    view.setUint8(row + 8, NodeKind.StringLiteral);
+    if (range !== undefined) {
+      view.setUint32(row + 16, range.start, true);
+      view.setUint32(row + 20, range.end, true);
+    }
   }
-  return ast._arena;
+  return arena;
 }
 
 export function fieldLocation(ast: AstView, id: number, descriptor: FieldDescriptor, kind: number = ast.kind(id)) {
-  const layout = layouts[kind], arena = ast._arena;
-  const row = ast.row(id);
+  const layout = layouts[kind], row = ast.row(id), arena = ast._arena;
   let view = row === -1 ? ast._view : arena!.view!;
   const payload = ast._payloadAt(id, row);
   if (!descriptor[0]) { return { view, offset: payload + descriptor[1] }; }
@@ -392,7 +412,7 @@ export function setSpan(ast: AstView, id: number, start: number, end: number) {
   if (id < ast.nodeCount) {
     ast._view.setUint32(ast._nodes + id * 8, start, true);
     ast._view.setUint32(ast._nodes + id * 8 + 4, end, true);
-  } else { ast._arena!.setSpan(id, start, end); }
+  } else { ensureArena(ast).setSpan(id, start, end); }
 }
 
 /** Preserve lone surrogates that TextEncoder would replace with U+FFFD. */

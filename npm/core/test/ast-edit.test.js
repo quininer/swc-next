@@ -508,6 +508,28 @@ test("literal changes update raw hints and support Unicode and lone surrogates",
   expectCode(different.code, 'const value = "text";');
 });
 
+test("borrowed literal strings preserve original write order and earlier ranges", () => {
+  const ast = parseSync('import "./old";');
+  const declaration = ast.program.body.get(0);
+  const first = ast.new_node(NodeKind.StringLiteral);
+  const second = ast.new_node(NodeKind.StringLiteral);
+  second.value = "./second";
+  first.value = "./first";
+  declaration.source = first;
+
+  const [, extension] = ast.encode();
+  const earlier = ast.bytesForString(second.nodeId, Field.value);
+  const later = ast.bytesForString(first.nodeId, Field.value);
+  assert.equal(earlier.buffer, extension.buffer);
+  assert.equal(later.buffer, extension.buffer);
+  assert.ok(earlier.byteOffset < later.byteOffset);
+
+  first.value = "./next";
+  assert.equal(new TextDecoder().decode(later), "./first");
+  assert.equal(second.value, "./second");
+  expectCode(generateBuffersSync(...ast.encode()).code, 'import "./next";');
+});
+
 test("new nodes and growth remain confined to the extension buffer", () => {
   const result = transform("const values = [];", (program, ast) => {
     program.body.get(0).declarators.get(0).init.elements = Array.from(

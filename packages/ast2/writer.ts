@@ -53,6 +53,7 @@ export function writeSpan(ast: AstView, id: number, isStart: boolean, value: num
 /** Expose current storage. Setters and list operations write bytes; the layout is published here. */
 export function finishEdits(ast: AstView, options?: Partial<AstMeta>): [Uint8Array, Uint8Array] {
   const flags = options === undefined ? ast._editor?.flags ?? ast._flags : finishEditsFlags(ast, options);
+  ast._flushPendingLiterals();
   ast._view.setUint32(ast.buffer.byteLength - 4, flags, true);
   editor(ast).flags = flags;
   const arena = ast._arena;
