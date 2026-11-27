@@ -62,6 +62,35 @@ test("AST buffers own the source and lazily create node views", () => {
   assert.equal(ast.source, 'const value = "你好";');
 });
 
+test("child string comparison follows native fields without creating views", () => {
+  const ast = parseSync("obj.field;");
+  const node = ast.program.body.get(0).expression;
+  const count = ast.materializedNodeCount;
+  assert.ok(node.childStringEquals(Field.property, Field.name, "field"));
+  assert.ok(!node.childStringEquals(Field.property, Field.name, "other"));
+  assert.ok(!node.childStringEquals(Field.property, Field.value, "field"));
+  assert.ok(!node.childStringEquals(Field.computed, Field.name, "field"));
+  assert.equal(ast.materializedNodeCount, count);
+
+  const alternate = readAst(ast.buffer, "obj.other;").program.body.get(0).expression;
+  assert.ok(alternate.childStringEquals(Field.property, Field.name, "other"));
+
+  const imported = parseSync('import x from "module";').program.body.get(0);
+  assert.ok(imported.childStringEquals(Field.source, Field.value, "module"));
+  const declarator = parseSync("let x;").program.body.get(0).declarators.get(0);
+  assert.ok(!declarator.childStringEquals(Field.init, Field.value, ""));
+
+  const delta = ast.new_node(NodeKind.IdentifierName);
+  delta.name = "\ud800";
+  node.property = delta;
+  const after = ast.materializedNodeCount;
+  assert.ok(node.childStringEquals(Field.property, Field.name, "\ud800"));
+  assert.equal(ast.materializedNodeCount, after);
+  const { view, offset } = ast.fieldOffset(node.nodeId, Field.property);
+  view.setUint32(offset, ast.totalNodeCount, true);
+  assert.throws(() => node.childStringEquals(Field.property, Field.name, "field"), RangeError);
+});
+
 test("child fields read stored IDs without indexing parents", () => {
   const ast = parseSync("call([value]);");
   const value = ast.program.body.get(0).expression.arguments.get(0).elements.get(0);

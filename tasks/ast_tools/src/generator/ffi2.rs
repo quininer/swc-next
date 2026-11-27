@@ -189,16 +189,32 @@ pub fn ffi2(schema: &Schema) -> Vec<RawOutput> {
     }
     metadata.push_str(
         r#"];
-// Expand the compact native layouts once; a zero slot means no native field.
-const nativeFieldTable = new Uint8Array(layouts.length * FIELD_COUNT);
+// The low byte indexes the full descriptor. For inline nodes and strings,
+// the upper byte also holds the byte offset, optional bit, and storage tag.
+const nativeFieldTable = new Uint16Array(layouts.length * FIELD_COUNT);
 for (let kind = 0; kind < layouts.length; kind++) {
   for (const [field, descriptor] of layouts[kind].fields) {
-    nativeFieldTable[kind * FIELD_COUNT + field] = descriptor;
+    const [extra, offset, type, optional] = fieldDescriptors[descriptor]!;
+    const tag = !extra && offset < 16 ? type === "node" ? 1 : type === "string" ? 2 : 0 : 0;
+    const inline = tag === 0 ? 0 : (tag << 5) | (optional ? 16 : 0) | offset;
+    nativeFieldTable[kind * FIELD_COUNT + field] = descriptor | (inline << 8);
   }
 }
+function nativeFieldWord(kind: number, field: number): number {
+  if (!Number.isInteger(field) || field <= 0 || field >= FIELD_COUNT) { return 0; }
+  return nativeFieldTable[kind * FIELD_COUNT + field] ?? 0;
+}
 export function nativeField(kind: number, field: number): FieldDescriptor | undefined {
-  if (!Number.isInteger(field) || field <= 0 || field >= FIELD_COUNT) { return undefined; }
-  return fieldDescriptors[nativeFieldTable[kind * FIELD_COUNT + field]];
+  return fieldDescriptors[nativeFieldWord(kind, field) & 255];
+}
+// Return the payload offset and optional bit, or -1 for a different layout.
+export function inlineNodeField(kind: number, field: number): number {
+  const info = nativeFieldWord(kind, field) >>> 8;
+  return info >>> 5 === 1 ? info & 31 : -1;
+}
+export function inlineStringField(kind: number, field: number): number {
+  const info = nativeFieldWord(kind, field) >>> 8;
+  return info >>> 5 === 2 ? info & 31 : -1;
 }
 "#,
     );
@@ -298,6 +314,11 @@ import { writeKind } from './storage.ts';
     const ast = this.#ast;
     if (this.#version !== ast._editVersion) { this._refresh(); }
     return ast.value(this.#id, field, this.#kind);
+  }
+  childStringEquals(child: FieldId, field: FieldId, expected: string): boolean {
+    const ast = this.#ast;
+    if (this.#version !== ast._editVersion) { this._refresh(); }
+    return ast._childStringEquals(this.#id, this.#kind, child, field, expected);
   }
   set(field: FieldId, value: unknown): void { this.#ast.writeNativeField(this.#id, field, value); }
   toJSON(): unknown { return this.#ast.materialize(this); }

@@ -3,7 +3,7 @@ import type { DeltaArena } from "./storage.ts";
 import type { AstMeta, BufferInput, NodeList, FieldOffset, FieldDescriptor, AstNode, AstNodeInput, EnumValue, NodeDescriptor } from "./types.ts";
 export type * from "./native-types.d.ts";
 export type { Lang, SourceType } from "@swc-next/types";
-import { layouts, enums, nativeField, NodeKind, NODE_KIND_COUNT, type NodeKindId } from "./schema.ts";
+import { layouts, enums, inlineNodeField, inlineStringField, nativeField, NodeKind, NODE_KIND_COUNT, type NodeKindId } from "./schema.ts";
 import { NodeView, createNodeView, createNumericNodeView, NUMERIC_NODE_KIND } from "./node.ts";
 import { cloneNode as cloneNodeInto } from "./clone.ts";
 import { writeSpan, writeNativeField, finishEdits, writeStringAt, writeNodeAt, writeExtraNodeAt, writeBoolAt, writeNumberAt, writeEnumAt } from "./writer.ts";
@@ -335,6 +335,16 @@ export class AstView {
     const start = view.getUint32(offset, true), end = view.getUint32(offset + 4, true);
     return optional && start === NONE && end === 0 ? null : this.string(start, end);
   }
+  #stringAtEquals(offset: number, optional: boolean, view: DataView, expected: string): boolean {
+    const start = view.getUint32(offset, true), end = view.getUint32(offset + 4, true);
+    if (optional && start === NONE && end === 0) { return false; }
+    const source = this.#source;
+    if (source !== undefined && this._positions.count === 0 && start <= end &&
+        end <= this._sourceLength && typeof expected === "string") {
+      return end - start === expected.length && source.startsWith(expected, start);
+    }
+    return this.string(start, end) === expected;
+  }
   enumAt(offset: number, name: string, optional: boolean, view = this._view): import("./types.ts").EnumValue | null {
     const value = view.getUint8(offset);
     if (optional && value === 255) { return null; }
@@ -374,6 +384,43 @@ export class AstView {
     }
     if (child >= this.totalNodeCount) { throw new RangeError("AST child out of bounds"); }
     return this.#wrapNodeView(child, this.kind(child));
+  }
+  _childStringEquals(id: number, kind: number, childField: FieldId, field: FieldId, expected: string): boolean {
+    const row = this.row(id);
+    if (row !== -1) { kind = this._arena!.kind(id); }
+    const inline = inlineNodeField(kind, childField);
+    if (inline < 0) {
+      const descriptor = nativeField(kind, childField);
+      if (descriptor?.[2] !== "node") { return false; }
+      const { offset, view } = fieldLocation(this, id, descriptor, kind);
+      const child = this.childAt(id, offset, descriptor[3], view);
+      return child !== NONE && this.#stringFieldEquals(child, this.kind(child), field, expected);
+    }
+    const view = row === -1 ? this._view : this._arena!.view!;
+    const child = view.getInt32(this._payloadAt(id, row) + (inline & 15), true);
+    if (child >= 0 && child < this.#nodeCount) {
+      const childKind = this._view.getUint8(this._kinds + child);
+      const string = inlineStringField(childKind, field);
+      if (string >= 0) {
+        const offset = this._payloads + child * PAYLOAD_SIZE + (string & 15);
+        return this.#stringAtEquals(offset, (string & 16) !== 0, this._view, expected);
+      }
+      if (childKind >= NODE_KIND_COUNT) { throw new RangeError("Unknown AST node kind"); }
+      return this.#stringFieldEquals(child, childKind, field, expected);
+    }
+    const childId = child >>> 0;
+    if (childId === NONE) {
+      if ((inline & 16) === 0) { throw new RangeError("Missing required AST child"); }
+      return false;
+    }
+    if (childId >= this.totalNodeCount) { throw new RangeError("AST child out of bounds"); }
+    return this.#stringFieldEquals(childId, this.kind(childId), field, expected);
+  }
+  #stringFieldEquals(id: number, kind: number, field: FieldId, expected: string): boolean {
+    const descriptor = nativeField(kind, field);
+    if (descriptor?.[2] !== "string") { return false; }
+    const { offset, view } = fieldLocation(this, id, descriptor, kind);
+    return this.#stringAtEquals(offset, descriptor[3], view, expected);
   }
   ref(id: number, slot: number, allowMissing = false): number {
     const field = this.fieldOffset(id, slot);

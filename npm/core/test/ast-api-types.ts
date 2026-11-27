@@ -40,6 +40,10 @@ void copied;
 
 const kind: NodeKindId = view.kind(handle.nodeId);
 handle.typeId = kind;
+const matchesChild: boolean = handle.childStringEquals(Field.property, Field.name, "value");
+void matchesChild;
+// @ts-expect-error Child and string fields use numeric field IDs.
+handle.childStringEquals("property", Field.name, "value");
 
 // Both getters retain their own discriminant when their setters are used.
 declare const source: AstNode<Program>;

@@ -30,6 +30,8 @@ Use `node.typeId` with `NodeKind` constants to test or change a node's kind
 without looking up its name. `node.type` still reads the name. Fill required
 fields before passing the buffers to Rust decoding. Fields can be accessed
 as properties or by numeric `Field` ID with `get` and `set`.
+Use `node.childStringEquals(Field.property, Field.name, "name")` to compare
+a child's string field without creating a child view.
 Use the exported constants rather than storing raw IDs across schema versions. A function's
 ordinary parameters are in `params.items`, and its rest parameter is in
 `params.rest`. File metadata is on `ast.meta`, not on the program node.

@@ -88,6 +88,8 @@ export declare class NodeView<T extends Node = Node> {
   end: number;
   /** Read a native field by ID. Returns `undefined` if the node has no such field. */
   get(field: FieldId): unknown;
+  /** Compare a child's string field without creating a view. Absent or incompatible fields do not match. */
+  childStringEquals(child: FieldId, field: FieldId, expected: string): boolean;
   /** Write a native field by ID in the current buffer. */
   set(field: FieldId, value: unknown): void;
   /** Materialize this node for JSON serialization. */

@@ -54,6 +54,11 @@ export class NodeView {
     if (this.#version !== ast._editVersion) { this._refresh(); }
     return ast.value(this.#id, field, this.#kind);
   }
+  childStringEquals(child: FieldId, field: FieldId, expected: string): boolean {
+    const ast = this.#ast;
+    if (this.#version !== ast._editVersion) { this._refresh(); }
+    return ast._childStringEquals(this.#id, this.#kind, child, field, expected);
+  }
   set(field: FieldId, value: unknown): void { this.#ast.writeNativeField(this.#id, field, value); }
   toJSON(): unknown { return this.#ast.materialize(this); }
   _numberValue(): NodeField<"value"> {
