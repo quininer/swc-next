@@ -10,12 +10,23 @@ import { writeSpan, writeNativeField, finishEdits, writeStringAt, writeNodeAt, w
 import { fieldLocation, isWellFormed, newNode } from "./storage.ts";
 import { AstList, isList, listAt } from "./list.ts";
 import type { ListEntry } from "./list.ts";
-import { fieldNames, parserMeta, type FieldId } from "./protocol.ts";
+import { Field, fieldNames, parserMeta, type FieldId } from "./protocol.ts";
 import { NONE, SPAN_SIZE } from "./layout.ts";
 import { PositionCache } from "./position.ts";
 
 // Keep the fixed wire stride local to the hot payload addressing code.
 const PAYLOAD_SIZE = 16;
+
+const MEMBER_KIND = NodeKind.MemberExpression;
+const MEMBER_NAME = Field.name;
+function memberOffset(field: FieldId, type: "bool" | "node"): number {
+  const layout = nativeField(MEMBER_KIND, field);
+  return layout && !layout[0] && layout[2] === type && !layout[3] ? layout[1] : -1;
+}
+const MEMBER_COMPUTED = memberOffset(Field.computed, "bool");
+const MEMBER_OPTIONAL = memberOffset(Field.optional, "bool");
+const MEMBER_PROPERTY = memberOffset(Field.property, "node");
+const MEMBER_INLINE = MEMBER_COMPUTED >= 0 && MEMBER_OPTIONAL >= 0 && MEMBER_PROPERTY >= 0;
 
 export { NodeKind, type NodeKindId } from "./schema.ts";
 export { Field, type FieldId } from "./protocol.ts";
@@ -385,6 +396,30 @@ export class AstView {
     if (child >= this.totalNodeCount) { throw new RangeError("AST child out of bounds"); }
     return this.#wrapNodeView(child, this.kind(child));
   }
+  memberPropertyNameEquals(id: number, expected: string): boolean {
+    if (MEMBER_INLINE && id >= 0 && id < this.#nodeCount) {
+      if (!Number.isInteger(id)) { throw new RangeError("Invalid AST node ID"); }
+      const view = this._view;
+      const kind = view.getUint8(this._kinds + id);
+      if (kind !== MEMBER_KIND) {
+        if (kind >= NODE_KIND_COUNT) { throw new RangeError("Unknown AST node kind"); }
+        return false;
+      }
+      return this.#memberPropertyNameEqualsAt(this._payloads + id * PAYLOAD_SIZE, expected, view);
+    }
+    const kind = this.kind(id);
+    if (kind !== MEMBER_KIND) { return false; }
+    if (!MEMBER_INLINE) {
+      return !this.value(id, Field.computed, kind) && !this.value(id, Field.optional, kind) &&
+        this._childStringEquals(id, kind, Field.property, MEMBER_NAME, expected);
+    }
+    const row = this.row(id);
+    return this.#memberPropertyNameEqualsAt(this._payloadAt(id, row), expected, this._arena!.view!);
+  }
+  #memberPropertyNameEqualsAt(payload: number, expected: string, view: DataView): boolean {
+    if (view.getUint8(payload + MEMBER_COMPUTED) || view.getUint8(payload + MEMBER_OPTIONAL)) { return false; }
+    return this.#childStringEqualsAt(payload + MEMBER_PROPERTY, false, view, MEMBER_NAME, expected);
+  }
   _childStringEquals(id: number, kind: number, childField: FieldId, field: FieldId, expected: string): boolean {
     const row = this.row(id);
     if (row !== -1) { kind = this._arena!.kind(id); }
@@ -397,7 +432,11 @@ export class AstView {
       return child !== NONE && this.#stringFieldEquals(child, this.kind(child), field, expected);
     }
     const view = row === -1 ? this._view : this._arena!.view!;
-    const child = view.getInt32(this._payloadAt(id, row) + (inline & 15), true);
+    const offset = this._payloadAt(id, row) + (inline & 15);
+    return this.#childStringEqualsAt(offset, (inline & 16) !== 0, view, field, expected);
+  }
+  #childStringEqualsAt(offset: number, optional: boolean, view: DataView, field: FieldId, expected: string): boolean {
+    const child = view.getInt32(offset, true);
     if (child >= 0 && child < this.#nodeCount) {
       const childKind = this._view.getUint8(this._kinds + child);
       const string = inlineStringField(childKind, field);
@@ -410,7 +449,7 @@ export class AstView {
     }
     const childId = child >>> 0;
     if (childId === NONE) {
-      if ((inline & 16) === 0) { throw new RangeError("Missing required AST child"); }
+      if (!optional) { throw new RangeError("Missing required AST child"); }
       return false;
     }
     if (childId >= this.totalNodeCount) { throw new RangeError("AST child out of bounds"); }

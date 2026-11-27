@@ -91,6 +91,35 @@ test("child string comparison follows native fields without creating views", () 
   assert.throws(() => node.childStringEquals(Field.property, Field.name, "field"), RangeError);
 });
 
+test("member property comparison by ID preserves flag checks without creating views", () => {
+  const ast = parseSync("obj.π;");
+  const member = ast.program.body.get(0).expression;
+  const id = member.nodeId;
+  const count = ast.materializedNodeCount;
+  assert.ok(ast.memberPropertyNameEquals(id, "π"));
+  assert.ok(!ast.memberPropertyNameEquals(id, "name"));
+  assert.equal(ast.materializedNodeCount, count);
+
+  const property = ast.new_node(NodeKind.IdentifierName);
+  property.name = "name";
+  const delta = ast.new_node(NodeKind.MemberExpression);
+  delta.property = property;
+  assert.ok(ast.memberPropertyNameEquals(delta.nodeId, "name"));
+
+  const { view, offset } = ast.fieldOffset(id, Field.property);
+  view.setUint32(offset, ast.totalNodeCount, true);
+  member.computed = true;
+  assert.ok(!ast.memberPropertyNameEquals(id, "π"));
+  member.computed = false;
+  member.optional = true;
+  assert.ok(!ast.memberPropertyNameEquals(id, "π"));
+  member.optional = false;
+  assert.throws(() => ast.memberPropertyNameEquals(id, "π"), RangeError);
+  assert.throws(() => ast.memberPropertyNameEquals(ast.totalNodeCount, "π"), RangeError);
+  ast._view.setUint8(ast._kinds + id, 255);
+  assert.throws(() => ast.memberPropertyNameEquals(id, "π"), RangeError);
+});
+
 test("child fields read stored IDs without indexing parents", () => {
   const ast = parseSync("call([value]);");
   const value = ast.program.body.get(0).expression.arguments.get(0).elements.get(0);

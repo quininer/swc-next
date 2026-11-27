@@ -167,6 +167,8 @@ export declare class AstView {
   readonly diagnostics: readonly AstDiagnostic[];
   node(id: number): AstNode | null;
   kind(id: number): NodeKindId;
+  /** Test a non-computed, non-optional member's property name without creating a view. */
+  memberPropertyNameEquals(id: number, expected: string): boolean;
   /** Read a child ID without creating a view. An absent child returns `0xffffffff`. */
   ref(id: number, field: FieldId, allowMissing?: boolean): number;
   byteStart(id: number): number;

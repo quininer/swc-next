@@ -41,7 +41,8 @@ void copied;
 const kind: NodeKindId = view.kind(handle.nodeId);
 handle.typeId = kind;
 const matchesChild: boolean = handle.childStringEquals(Field.property, Field.name, "value");
-void matchesChild;
+const matchesMember: boolean = view.memberPropertyNameEquals(handle.nodeId, "value");
+void [matchesChild, matchesMember];
 // @ts-expect-error Child and string fields use numeric field IDs.
 handle.childStringEquals("property", Field.name, "value");
 

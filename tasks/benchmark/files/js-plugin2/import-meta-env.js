@@ -7,10 +7,10 @@ import { identifier } from './formatjs/ast.js';
 
 const walker = createWalker({
   MemberExpression(ctx) {
+    if (!ctx.ast.memberPropertyNameEquals(ctx.nodeId, 'env')) { return; }
     const node = ctx.node;
     const object = node.object;
-    if (!node.computed && !node.optional && node.property.typeId === NodeKind.IdentifierName
-      && node.childStringEquals(Field.property, Field.name, 'env') && object.typeId === NodeKind.MetaProperty
+    if (node.property.typeId === NodeKind.IdentifierName && object.typeId === NodeKind.MetaProperty
       && object.childStringEquals(Field.meta, Field.name, 'import') && object.childStringEquals(Field.property, Field.name, 'meta')) {
       node.object = identifier('process', object);
     }
